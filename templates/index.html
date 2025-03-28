@@ -1,14 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MySQL and HTML</title>
+    <title>Endangered Monuments</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .field-row {
+            margin: 6px 0;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+    </style>
 </head>
 <body>
 
-<form action="/add" method="post">
-    <input type="text" name="data" placeholder="Enter Data">
-    <input type="submit" value="Submit">
-</form>
+<h2>MySQL Connection Status: <span id="status">Checking...</span></h2>
+
+<h3>Monument Table:</h3>
+<div id="field-list"></div>
+
+<script>
+fetch('/status')
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('status').innerText = data.connected ? 'Connected' : 'Failed';
+
+        if (data.connected && data.columns.length > 0) {
+            const container = document.getElementById('field-list');
+            data.columns.forEach(col => {
+                const row = document.createElement('div');
+                row.className = 'field-row';
+                row.innerHTML = `<span class="label">${col}:</span> &mdash;`;
+                container.appendChild(row);
+            });
+        }
+    });
+</script>
 
 </body>
 </html>
