@@ -8,11 +8,11 @@ When this program is ran using python connections.py, flask starts a web server 
 app = Flask(__name__)
 
 config = {
-    'host': 'localhost',
+    'host': 'sql5.freesqldatabase.com',
     'port': 3306,
-    'user': 'root',
-    'password': 'CS4604',
-    'database': 'endangered_monuments'
+    'user': 'sql5770619',
+    'password': 'u6HGSk77Qp',
+    'database': 'sql5770619'
 }
 
 """
