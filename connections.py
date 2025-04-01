@@ -84,7 +84,7 @@ def status():
     try:
         conn = mysql.connector.connect(**config)
         cursor = conn.cursor()
-        cursor.execute("DESCRIBE monument") 
+        cursor.execute("DESCRIBE monuments") 
         columns = cursor.fetchall()
         column_names = [col[0] for col in columns]
         return jsonify(connected=True, columns=column_names)
