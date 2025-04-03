@@ -25,18 +25,82 @@ def index():
 """
 Accepts submissions from index.html and adds it to the DBMS
 """
-@app.route('/add', methods=['POST'])
+@app.route('/api/add', methods=['POST'])
 def add():
-    data = request.form['data']
+    # Get JSON data from request
+    data = request.json
+    
+    # Extract table and data from request
+    table_name = data.get('table')
+    item_data = data.get('data')
+    
+    # Create connection to MySQL
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor()
-    # Just an example of how to insert data into the database
-    cursor.execute("INSERT INTO monuments (URL) VALUES (%s)", (data,))
+    
+    # Dynamically build the SQL query based on the table and provided columns
+    columns = []
+    values = []
+    placeholders = []
+    
+    for column, value in item_data.items():
+        columns.append(column)
+        values.append(value)
+        placeholders.append("%s")  # Using %s as placeholder for all types
+    
+    columns_str = ", ".join(columns)
+    placeholders_str = ", ".join(placeholders)
+    
+    # Create the INSERT statement
+    sql = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders_str})"
+    
+    # Execute the query
+    cursor.execute(sql, values)
     conn.commit()
+        
     cursor.close()
     conn.close()
-    return redirect(url_for('index'))
+    
+    return jsonify({
+        'success': True,
+        'message': f'Data added successfully to {table_name}',
+    })
 
+"""_summary_
+Accepts primary key submissions from index.html and removes from the DBMS
+"""
+@app.route('/api/delete', methods=['POST'])
+def delete():
+    # Get JSON data from request
+    data = request.json
+    
+    # Extract required information
+    table = data.get('table')
+    primary_key_column = data.get('primaryKeyColumn')
+    primary_key_value = data.get('primaryKeyValue')
+    
+    # Connect to database
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor()
+    
+    # Create SQL query using parameterized query
+    query = f"DELETE FROM {table} WHERE {primary_key_column} = %s"
+    
+    # Execute query with parameter
+    cursor.execute(query, (primary_key_value,))
+    
+    # Commit the transaction
+    conn.commit()
+    
+    # Close cursor and connection
+    cursor.close()
+    conn.close()
+    
+    # Return response
+    return jsonify({
+        'success': True,
+        'message': f'Successfully deleted record from {table}',
+    })
 
 """
 This function displays the contents of any table in the endangered monuments DBMS.
@@ -84,7 +148,7 @@ def status():
     try:
         conn = mysql.connector.connect(**config)
         cursor = conn.cursor()
-        cursor.execute("DESCRIBE monuments") 
+        cursor.execute("DESCRIBE MONUMENT") 
         columns = cursor.fetchall()
         column_names = [col[0] for col in columns]
         return jsonify(connected=True, columns=column_names)
@@ -95,6 +159,6 @@ def status():
         if 'conn' in locals() and conn.is_connected():
             cursor.close()
             conn.close()
-            
+
 if __name__ == '__main__':
     app.run(debug=True)
