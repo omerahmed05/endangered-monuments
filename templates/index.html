@@ -235,9 +235,11 @@ fetch('/status')
         ],
         'MONUMENT': [
             {name: 'MONUMENT_ID', type: 'number', required: true, isPrimaryKey: true},
+            {name: 'NAME', type: 'text', required: true},
             {name: 'ITEM_CATEGORY', type: 'text', required: true},
             {name: 'ICON', type: 'text', required: true},
             {name: 'CITATION_URL', type: 'text', required: true},
+            {name: 'THUMBNAIL', type: 'text', required: true},
             {name: 'LONGITUDE', type: 'number', required: true},
             {name: 'LATITUDE', type: 'number', required: true},
             {name: 'CITY_ID', type: 'number', required: true, isForeignKey: true},
