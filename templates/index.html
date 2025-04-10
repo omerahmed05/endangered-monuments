@@ -237,6 +237,8 @@ fetch('/status')
             {name: 'MONUMENT_ID', type: 'number', required: true, isPrimaryKey: true},
             {name: 'NAME', type: 'text', required: true},
             {name: 'ITEM_CATEGORY', type: 'text', required: true},
+            {name: 'ITEM_LABEL', type: 'text', required: false},
+            {name: 'ITEM_DESCIPTION', type: 'text', required: false},
             {name: 'ICON', type: 'text', required: true},
             {name: 'CITATION_URL', type: 'text', required: true},
             {name: 'THUMBNAIL', type: 'text', required: true},
@@ -258,7 +260,8 @@ fetch('/status')
             {name: 'EMAIL_ADDRESS', type: 'text', required: true},
             {name: 'START_DATE', type: 'date', required: true},
             {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
-            {name: 'MANAGER', type: 'number', required: true, isForeignKey: true}
+            {name: 'MANAGER', type: 'number', required: true, isForeignKey: true},
+            {name: 'CONTRIBUTOR', type: 'text', required: true}
         ],
         'RESEARCH': [
             {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true, isForeignKey: true},
