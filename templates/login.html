@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card shadow-sm mb-5">
+        <div class="card-header text-center">
+          <h2>Login</h2>
+        </div>
+        <div class="card-body">
+          <form method="post" novalidate>
+            <div class="mb-3">
+              <label for="role" class="form-label">Role</label>
+              <select id="role" name="role" class="form-select" required>
+                <option value="">— Select Role —</option>
+                <option value="researcher">Researcher</option>
+                <option value="archaeologist">Archaeologist</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="USERNAME" class="form-label">Username</label>
+              <input id="USERNAME" name="USERNAME" type="text" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="PASSWORD" class="form-label">Password</label>
+              <input id="PASSWORD" name="PASSWORD" type="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Log In</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

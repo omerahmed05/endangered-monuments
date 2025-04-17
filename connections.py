@@ -1,11 +1,22 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, abort
 import mysql.connector
 from mysql.connector import Error
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import json
 
 """
 When this program is ran using python connections.py, flask starts a web server that listens for requests.
 """
 app = Flask(__name__)
+
+# Load your JSON file exactly once
+HERE = os.path.dirname(__file__)
+with open(os.path.join(HERE, 'login.JSON'), 'r') as f:
+    raw = json.load(f)
+
+# Normalize the keys to lowercase so 'Researcher' or 'researcher' both match
+SIGNUP_FIELDS = { k.lower(): v for k, v in raw.items() }
 
 config = {
     'host': 'sql5.freesqldatabase.com',
@@ -160,5 +171,73 @@ def status():
             cursor.close()
             conn.close()
 
+@app.route('/signup/<role>', methods=['GET','POST'])
+def signup(role):
+
+    if request.method == 'POST':
+        data = {}
+        # collect & hash password
+        for field in SIGNUP_FIELDS[role]:
+            val = request.form.get(field['name'])
+            if not val and field['required']:
+                flash(f"{field['name']} is required", "error")
+                return redirect(request.url)
+            data[field['name']] = val
+
+        # hash the password
+        data['PASSWORD'] = generate_password_hash(data['PASSWORD'])
+
+        # build INSERT
+        table = role.upper()
+        cols = ", ".join(data.keys())
+        placeholders = ", ".join(["%s"] * len(data))
+        sql = f"INSERT INTO {table} ({cols}) VALUES ({placeholders})"
+
+        conn = mysql.connector.connect(**config)
+        cursor = conn.cursor()
+        cursor.execute(sql, list(data.values()))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Signup successful! Please log in.", "success")
+        return redirect(url_for('login'))
+
+    # GET → render form
+    return render_template('signup.html',
+                           role=role,
+                           fields=SIGNUP_FIELDS[role])
+
+@app.route('/login', methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
+        role     = request.form.get('role', '').lower()
+        username = request.form.get('USERNAME')
+        password = request.form.get('PASSWORD')
+
+        if role not in SIGNUP_FIELDS:
+            flash("Invalid role.", "error")
+            return redirect(url_for('login'))
+
+        table = role.upper()
+        conn = mysql.connector.connect(**config)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(f"SELECT * FROM {table} WHERE USERNAME=%s", (username,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if user and check_password_hash(user['PASSWORD'], password):
+            session['user_id'] = user[f"{table}_ID"]
+            session['role']    = role
+            flash("Logged in successfully.", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid credentials.", "error")
+            return redirect(url_for('login'))
+
+    return render_template('login.html')
+
 if __name__ == '__main__':
+    #print(app.url_map)
     app.run(debug=True)

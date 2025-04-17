@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-5">
+        <div class="card-header text-center">
+          <h2>Create {{ role.title() }} Account</h2>
+        </div>
+        <div class="card-body">
+          <form method="post" novalidate>
+            {% for field in fields %}
+              <div class="mb-3">
+                <label for="{{ field.name }}" class="form-label">
+                  {{ field.name.replace('_',' ').title() }}
+                </label>
+                <input
+                  type="{{ field.type }}"
+                  class="form-control"
+                  id="{{ field.name }}"
+                  name="{{ field.name }}"
+                  {% if field.required %} required {% endif %}
+                >
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary w-100">
+              Sign Up
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
