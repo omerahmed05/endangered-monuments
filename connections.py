@@ -9,7 +9,7 @@ import json
 When this program is ran using python connections.py, flask starts a web server that listens for requests.
 """
 app = Flask(__name__)
-
+app.secret_key = 'a-very-secret-key'
 # Load your JSON file exactly once
 HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, 'login.JSON'), 'r') as f:
@@ -176,16 +176,18 @@ def signup(role):
 
     if request.method == 'POST':
         data = {}
+        print(SIGNUP_FIELDS[role])
         # collect & hash password
         for field in SIGNUP_FIELDS[role]:
             val = request.form.get(field['name'])
+            #print(val)
             if not val and field['required']:
                 flash(f"{field['name']} is required", "error")
                 return redirect(request.url)
             data[field['name']] = val
 
         # hash the password
-        data['PASSWORD'] = generate_password_hash(data['PASSWORD'])
+        data['PASSWORD'] = generate_password_hash(data['PASSWORD'],method='pbkdf2:sha256')
 
         # build INSERT
         table = role.upper()
@@ -210,6 +212,7 @@ def signup(role):
 
 @app.route('/login', methods=['GET','POST'])
 def login():
+    print("xx")
     if request.method == 'POST':
         role     = request.form.get('role', '').lower()
         username = request.form.get('USERNAME')
@@ -220,13 +223,18 @@ def login():
             return redirect(url_for('login'))
 
         table = role.upper()
+        #print(table)
         conn = mysql.connector.connect(**config)
         cursor = conn.cursor(dictionary=True)
         cursor.execute(f"SELECT * FROM {table} WHERE USERNAME=%s", (username,))
         user = cursor.fetchone()
+        #print(cursor)
+        print(user)
+        print(user['PASSWORD'])
         cursor.close()
         conn.close()
-
+        #print(password)
+        print(check_password_hash(user['PASSWORD'], password))
         if user and check_password_hash(user['PASSWORD'], password):
             session['user_id'] = user[f"{table}_ID"]
             session['role']    = role
