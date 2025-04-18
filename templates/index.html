@@ -1,491 +1,216 @@
 {% extends "base.html" %}
 {% block content %}
-    <title>Endangered Monuments</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 30px;
-            background-color: #f8f9fa;
-            color: #333;
-            line-height: 1.6;
-        }
+<div class="container my-4">
 
-        h2, h3 {
-            color: #2c3e50;
-            text-align: center;
-            margin-top: 30px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eaeaea;
-        }
+  <!-- Cards for Viewing Tables -->
+  <h2 class="text-center mb-4">Explore the Endangered Monuments Database</h2>
+  <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+    {% for table in ['MONUMENT', 'CITY', 'CONTEXT', 'EXCAVATION_PROJECT', 'RESEARCH', 'RESEARCHER', 'ARCHAEOLOGIST'] %}
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center d-flex flex-column justify-content-between">
+          <h5 class="card-title">{{ table.replace('_', ' ').title() }}</h5>
+          <a href="{{ url_for('display_table', table_name=table) }}" class="btn btn-outline-primary mt-3">View Table</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 
-        .field-row {
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-        }
+  <!-- MySQL Status -->
+  <h3 class="text-center mb-3">MySQL Connection Status: <span id="status" class="fw-bold text-success">Checking...</span></h3>
 
-        .label {
-            font-weight: 600;
-            display: inline-block;
-            width: 150px;
-            color: #555;
-        }
+  <!-- Add Form -->
+  <h4 class="mt-5">Add to Database</h4>
+  <form id="insertForm" class="mb-5">
+    <div class="form-group mb-3">
+      <label for="tableDropdown" class="form-label">Select Table:</label>
+      <select id="tableDropdown" name="table" class="form-select" onchange="generateColumnFields()">
+        <option value="">-- Select Table --</option>
+        <option value="ARCHAEOLOGIST">ARCHAEOLOGIST</option>
+        <option value="CITY">CITY</option>
+        <option value="CONTEXT">CONTEXT</option>
+        <option value="EXCAVATION_PROJECT">EXCAVATION_PROJECT</option>
+        <option value="MONUMENT">MONUMENT</option>
+        <option value="RESEARCH">RESEARCH</option>
+        <option value="RESEARCHER">RESEARCHER</option>
+      </select>
+    </div>
+    <div id="columnFields"></div>
+    <div id="submitButtonContainer" class="text-center" style="display: none;">
+      <button type="submit" class="btn btn-success mt-3">Submit</button>
+    </div>
+  </form>
 
-        .form-group {
-            margin-bottom: 20px;
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+  <!-- Delete Form -->
+  <h4>Delete from Database</h4>
+  <form id="deleteForm">
+    <div class="form-group mb-3">
+      <label for="deleteTableDropdown" class="form-label">Select Table:</label>
+      <select id="deleteTableDropdown" name="table" class="form-select">
+        <option value="">-- Select Table --</option>
+        <option value="ARCHAEOLOGIST">ARCHAEOLOGIST</option>
+        <option value="CITY">CITY</option>
+        <option value="CONTEXT">CONTEXT</option>
+        <option value="EXCAVATION_PROJECT">EXCAVATION_PROJECT</option>
+        <option value="MONUMENT">MONUMENT</option>
+        <option value="RESEARCH">RESEARCH</option>
+        <option value="RESEARCHER">RESEARCHER</option>
+      </select>
+    </div>
+    <div id="deletePrimaryKeyField" style="display: none;">
+      <label for="primaryKey" class="form-label">Primary Key:</label>
+      <input type="text" id="primaryKey" name="primaryKey" class="form-control" placeholder="Enter primary key value">
+    </div>
+    <div id="deleteSubmitButtonContainer" class="text-center mt-3" style="display: none;">
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </div>
+  </form>
+</div>
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #444;
-        }
-
-        select, input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        select:focus, input:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-        }
-
-        form {
-            background-color: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 600;
-            display: block;
-            margin: 0 auto;
-            min-width: 150px;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #45a049;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        #columnFields, #deletePrimaryKeyField {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .required-field label:after {
-            content: " *";
-            color: #e74c3c;
-            font-weight: bold;
-        }
-
-        #status {
-            display: inline-block;
-            margin-left: 10px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-
-        #status:empty:before {
-            content: "Checking...";
-            color: #f39c12;
-        }
-
-        #submitButtonContainer, #deleteSubmitButtonContainer {
-            margin-top: 25px;
-            text-align: center;
-        }
-
-        #insertForm {
-            border-left: 4px solid #4CAF50;
-        }
-
-        #deleteForm {
-            border-left: 4px solid #e74c3c;
-        }
-
-    </style>
-</head>
-<body>
-
-<h2>MySQL Connection Status: <span id="status">Checking...</span></h2>
-
+<!-- Scripts -->
 <script>
-fetch('/status')
+  // Check DB connection
+  fetch('/status')
     .then(res => res.json())
     .then(data => {
-        document.getElementById('status').innerText = data.connected ? 'Connected' : 'Failed';
-
-        if (data.connected && data.columns.length > 0) {
-            data.columns.forEach(col => {
-                const row = document.createElement('div');
-                row.className = 'field-row';
-                row.innerHTML = `<span class="label">${col}:</span> &mdash;`;
-            });
-        }
+      document.getElementById('status').innerText = data.connected ? 'Connected' : 'Failed';
     });
-</script>
 
-<h3>Add to Database</h3>
-    
-<form id="insertForm">
-    <div class="form-group">
-        <label for="tableDropdown">Select Table:</label>
-        <select id="tableDropdown" name="table" onchange="generateColumnFields()">
-            <option value="">-- Select Table --</option>
-            <option value="ARCHAEOLOGIST">ARCHAEOLOGIST</option>
-            <option value="CITY">CITY</option>
-            <option value="CONTEXT">CONTEXT</option>
-            <option value="EXCAVATION_PROJECT">EXCAVATION_PROJECT</option>
-            <option value="MONUMENT">MONUMENT</option>
-            <option value="RESEARCH">RESEARCH</option>
-            <option value="RESEARCHER">RESEARCHER</option>
-        </select>
-    </div>
-    
-    <div id="columnFields">
-        <!-- Column fields will be dynamically generated here -->
-    </div>
-    
-    <div id="submitButtonContainer" style="display: none;">
-        <button type="submit">Submit</button>
-    </div>
-</form>
+  const tableStructure = {
+    'CITY': [{name: 'CITY_ID', type: 'number', required: true, isPrimaryKey: true},{name: 'NAME', type: 'text', required: true}],
+    'EXCAVATION_PROJECT': [
+      {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true},
+      {name: 'NAME', type: 'text', required: true},
+      {name: 'PROJECT_URL', type: 'text', required: true},
+      {name: 'CITY_ID', type: 'number', required: true, isForeignKey: true}
+    ],
+    'MONUMENT': [
+      {name: 'MONUMENT_ID', type: 'number', required: true, isPrimaryKey: true},
+      {name: 'NAME', type: 'text', required: true},
+      {name: 'ITEM_CATEGORY', type: 'text', required: true},
+      {name: 'ITEM_LABEL', type: 'text', required: false},
+      {name: 'ITEM_DESCIPTION', type: 'text', required: false},
+      {name: 'ICON', type: 'text', required: true},
+      {name: 'CITATION_URL', type: 'text', required: true},
+      {name: 'THUMBNAIL', type: 'text', required: true},
+      {name: 'LONGITUDE', type: 'number', required: true},
+      {name: 'LATITUDE', type: 'number', required: true},
+      {name: 'CITY_ID', type: 'number', required: true, isForeignKey: true},
+      {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true}
+    ],
+    'CONTEXT': [
+      {name: 'CONTEXT', type: 'text', required: true, isPrimaryKey: true},
+      {name: 'MONUMENT_ID', type: 'number', required: true, isForeignKey: true}
+    ],
+    'RESEARCHER': [
+      {name: 'RESEARCHER_ID', type: 'number', required: true, isPrimaryKey: true},
+      {name: 'URL', type: 'text', required: true},
+      {name: 'USERNAME', type: 'text', required: true},
+      {name: 'PHONE_NUMBER', type: 'text', required: true},
+      {name: 'MAIL_ADDRESS', type: 'text', required: true},
+      {name: 'EMAIL_ADDRESS', type: 'text', required: true},
+      {name: 'START_DATE', type: 'date', required: true},
+      {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
+      {name: 'MANAGER', type: 'number', required: true, isForeignKey: true},
+      {name: 'CONTRIBUTOR', type: 'text', required: true}
+    ],
+    'RESEARCH': [
+      {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true, isForeignKey: true},
+      {name: 'UPDATE_DATE', type: 'date', required: true},
+      {name: 'PUBLISHED_DATE', type: 'date', required: true},
+      {name: 'RESEARCH_ID', type: 'number', required: true, isPrimaryKey: true}
+    ],
+    'ARCHAEOLOGIST': [
+      {name: 'ARCHAEOLOGIST_ID', type: 'number', required: true, isPrimaryKey: true},
+      {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
+      {name: 'USERNAME', type: 'text', required: true},
+      {name: 'EMAIL_ADDRESS', type: 'text', required: true},
+      {name: 'MAIL_ADDRESS', type: 'text', required: true},
+      {name: 'PHONE_NUMBER', type: 'text', required: true},
+      {name: 'START_DATE', type: 'date', required: true}
+    ]
+  };
 
-<h3>Delete from Database</h3>
-<form id="deleteForm">
-    <div class="form-group">
-        <label for="deleteTableDropdown">Select Table:</label>
-        <select id="deleteTableDropdown" name="table">
-            <option value="">-- Select Table --</option>
-            <option value="ARCHAEOLOGIST">ARCHAEOLOGIST</option>
-            <option value="CITY">CITY</option>
-            <option value="CONTEXT">CONTEXT</option>
-            <option value="EXCAVATION_PROJECT">EXCAVATION_PROJECT</option>
-            <option value="MONUMENT">MONUMENT</option>
-            <option value="RESEARCH">RESEARCH</option>
-            <option value="RESEARCHER">RESEARCHER</option>
-        </select>
-    </div>
-    
-    <div id="deletePrimaryKeyField" style="display: none;">
-        <label for="primaryKey">Entry to delete (please specify the primary key):</label>
-        <input type="text" id="primaryKey" name="primaryKey" placeholder="Enter primary key value">
-    </div>
-    
-    <div id="deleteSubmitButtonContainer" style="display: none;">
-        <button type="submit">Submit</button>
-    </div>
-</form>
-
-
-<a href="http://127.0.0.1:5000/display/MONUMENT">MONUMENT</a>
-
-<a href="http://127.0.0.1:5000/display/CITY">CITY</a>
-
-<a href="http://127.0.0.1:5000/display/CONTEXT">CONTEXT</a>
-
-<a href="http://127.0.0.1:5000/display/EXCAVATION_PROJECT">EXCAVATION_PROJECT</a>
-
-<a href="http://127.0.0.1:5000/display/RESEARCH">RESEARCH</a>
-
-<a href="http://127.0.0.1:5000/display/RESEARCHER">RESEARCHER</a>
-
-<a href="http://127.0.0.1:5000/display/ARCHAEOLOGIST">ARCHAEOLOGIST</a>
-
-<script>
-    // Define table structure with column information
-    const tableStructure = {
-        'CITY': [
-            {name: 'CITY_ID', type: 'number', required: true, isPrimaryKey: true},
-            {name: 'NAME', type: 'text', required: true}
-        ],
-        'EXCAVATION_PROJECT': [
-            {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true},
-            {name: 'NAME', type: 'text', required: true},
-            {name: 'PROJECT_URL', type: 'text', required: true},
-            {name: 'CITY_ID', type: 'number', required: true, isForeignKey: true}
-        ],
-        'MONUMENT': [
-            {name: 'MONUMENT_ID', type: 'number', required: true, isPrimaryKey: true},
-            {name: 'NAME', type: 'text', required: true},
-            {name: 'ITEM_CATEGORY', type: 'text', required: true},
-            {name: 'ITEM_LABEL', type: 'text', required: false},
-            {name: 'ITEM_DESCIPTION', type: 'text', required: false},
-            {name: 'ICON', type: 'text', required: true},
-            {name: 'CITATION_URL', type: 'text', required: true},
-            {name: 'THUMBNAIL', type: 'text', required: true},
-            {name: 'LONGITUDE', type: 'number', required: true},
-            {name: 'LATITUDE', type: 'number', required: true},
-            {name: 'CITY_ID', type: 'number', required: true, isForeignKey: true},
-            {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true}
-        ],
-        'CONTEXT': [
-            {name: 'CONTEXT', type: 'text', required: true, isPrimaryKey: true},
-            {name: 'MONUMENT_ID', type: 'number', required: true, isForeignKey: true}
-        ],
-        'RESEARCHER': [
-            {name: 'RESEARCHER_ID', type: 'number', required: true, isPrimaryKey: true},
-            {name: 'URL', type: 'text', required: true},
-            {name: 'USERNAME', type: 'text', required: true},
-            {name: 'PHONE_NUMBER', type: 'text', required: true},
-            {name: 'MAIL_ADDRESS', type: 'text', required: true},
-            {name: 'EMAIL_ADDRESS', type: 'text', required: true},
-            {name: 'START_DATE', type: 'date', required: true},
-            {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
-            {name: 'MANAGER', type: 'number', required: true, isForeignKey: true},
-            {name: 'CONTRIBUTOR', type: 'text', required: true}
-        ],
-        'RESEARCH': [
-            {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true, isForeignKey: true},
-            {name: 'UPDATE_DATE', type: 'date', required: true},
-            {name: 'PUBLISHED_DATE', type: 'date', required: true},
-            {name: 'RESEARCH_ID', type: 'number', required: true, isPrimaryKey: true}
-        ],
-        'ARCHAEOLOGIST': [
-            {name: 'ARCHAEOLOGIST_ID', type: 'number', required: true, isPrimaryKey: true},
-            {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
-            {name: 'USERNAME', type: 'text', required: true},
-            {name: 'EMAIL_ADDRESS', type: 'text', required: true},
-            {name: 'MAIL_ADDRESS', type: 'text', required: true},
-            {name: 'PHONE_NUMBER', type: 'text', required: true},
-            {name: 'START_DATE', type: 'date', required: true}
-        ]
-    };
-
-    // Function to generate input fields for columns
-    function generateColumnFields() {
-        const tableDropdown = document.getElementById('tableDropdown');
-        const columnFieldsContainer = document.getElementById('columnFields');
-        const submitButtonContainer = document.getElementById('submitButtonContainer');
-        
-        // Clear existing fields
-        columnFieldsContainer.innerHTML = '';
-        
-        // Get the selected table
-        const selectedTable = tableDropdown.value;
-        
-        if (selectedTable) {
-            // Get columns for the selected table
-            const columns = tableStructure[selectedTable];
-            
-            // Create input fields for each column
-            columns.forEach(column => {
-                const formGroup = document.createElement('div');
-                formGroup.className = column.required ? 'form-group required-field' : 'form-group';
-                
-                const label = document.createElement('label');
-                label.setAttribute('for', `input_${column.name}`);
-                label.textContent = column.name;
-                
-                if (column.isPrimaryKey) {
-                    label.textContent += ' (Primary Key)';
-                } else if (column.isForeignKey) {
-                    label.textContent += ' (Foreign Key)';
-                }
-                
-                const input = document.createElement('input');
-                input.setAttribute('type', column.type);
-                input.setAttribute('id', `input_${column.name}`);
-                input.setAttribute('name', column.name);
-                
-                if (column.required) {
-                    input.setAttribute('required', 'required');
-                }
-                
-                // No step attribute for number inputs
-                
-                formGroup.appendChild(label);
-                formGroup.appendChild(input);
-                columnFieldsContainer.appendChild(formGroup);
-            });
-            
-            // Show the submit button
-            submitButtonContainer.style.display = 'block';
-        } else {
-            // Hide the submit button
-            submitButtonContainer.style.display = 'none';
-        }
+  function generateColumnFields() {
+    const table = document.getElementById('tableDropdown').value;
+    const container = document.getElementById('columnFields');
+    const submitBtn = document.getElementById('submitButtonContainer');
+    container.innerHTML = '';
+    if (!table || !tableStructure[table]) {
+      submitBtn.style.display = 'none';
+      return;
     }
-
-    document.getElementById('deleteTableDropdown').addEventListener('change', function() {
-        const primaryKeyField = document.getElementById('deletePrimaryKeyField');
-        const submitButtonContainer = document.getElementById('deleteSubmitButtonContainer');
-        
-        if (this.value === '') {
-            // Hide the primary key field and submit button when "-- Select Table --" is selected
-            primaryKeyField.style.display = 'none';
-            submitButtonContainer.style.display = 'none';
-        } else {
-            // Show the primary key field and submit button when a table is selected
-            primaryKeyField.style.display = 'block';
-            submitButtonContainer.style.display = 'block';
-        }
+    tableStructure[table].forEach(col => {
+      const group = document.createElement('div');
+      group.className = 'form-group mb-2';
+      const label = document.createElement('label');
+      label.textContent = col.name + (col.isPrimaryKey ? ' (Primary Key)' : col.isForeignKey ? ' (Foreign Key)' : '');
+      const input = document.createElement('input');
+      input.type = col.type;
+      input.name = col.name;
+      input.id = `input_${col.name}`;
+      input.className = 'form-control';
+      if (col.required) input.required = true;
+      group.appendChild(label);
+      group.appendChild(input);
+      container.appendChild(group);
     });
+    submitBtn.style.display = 'block';
+  }
 
-    document.getElementById('deleteForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-        
-        const table = document.getElementById('deleteTableDropdown').value;
-        const primaryKey = document.getElementById('primaryKey').value;
-        
-        if (!table) {
-            alert('Please select a table');
-            return;
-        }
-        
-        if (!primaryKey) {
-            alert('Please enter a primary key value');
-            return;
-        }
-        
-        // Get primary key column name for the selected table
-        const columns = tableStructure[table];
-        let primaryKeyColumn = '';
-        
-        for (const column of columns) {
-            if (column.isPrimaryKey) {
-                primaryKeyColumn = column.name;
-                break;
-            }
-        }
-        
-        if (!primaryKeyColumn) {
-            alert('Error: Could not determine primary key column for selected table');
-            return;
-        }
-        
-        // Prepare data for delete operation
-        const formData = {
-            table: table,
-            primaryKeyColumn: primaryKeyColumn,
-            primaryKeyValue: primaryKey
-        };
-        
-        // Send data to Flask endpoint for delete operation
-        fetch('/api/delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Success:', data);
-            alert('Data successfully deleted from database!');
-            // Reset the form
-            document.getElementById('deleteForm').reset();
-            // Hide primary key field and submit button
-            document.getElementById('deletePrimaryKeyField').style.display = 'none';
-            document.getElementById('deleteSubmitButtonContainer').style.display = 'none';
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            alert('There was an error deleting the data. Please try again.');
-        });
+  document.getElementById('insertForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const table = document.getElementById('tableDropdown').value;
+    const formData = { table, data: {} };
+    let valid = true;
+    tableStructure[table].forEach(col => {
+      const val = document.getElementById(`input_${col.name}`).value;
+      if (col.required && !val) valid = false;
+      if (val) formData.data[col.name] = val;
     });
+    if (!valid) return alert('Please fill in all required fields.');
+    fetch('/api/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    }).then(res => res.json()).then(data => {
+      alert(data.message);
+      document.getElementById('insertForm').reset();
+      document.getElementById('columnFields').innerHTML = '';
+      document.getElementById('submitButtonContainer').style.display = 'none';
+    }).catch(err => {
+      console.error(err);
+      alert('Error adding data.');
+    });
+  });
 
-    // Event listener for form submission
-    document.getElementById('insertForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-        
-        const table = document.getElementById('tableDropdown').value;
-        
-        if (!table) {
-            alert('Please select a table');
-            return;
-        }
-        
-        // Collect all input values
-        const columns = tableStructure[table];
-        const formData = {
-            table: table,
-            data: {}
-        };
-        
-        // Check if all required fields are filled
-        let isValid = true;
-        
-        columns.forEach(column => {
-            const inputElement = document.getElementById(`input_${column.name}`);
-            const value = inputElement.value;
-            
-            if (column.required && !value) {
-                isValid = false;
-                inputElement.classList.add('error');
-            } else if (value) {
-                // Add to form data if there's a value
-                formData.data[column.name] = value;
-            }
-        });
-        
-        if (!isValid) {
-            alert('Please fill in all required fields');
-            return;
-        }
-        
-        // Send data to Flask endpoint
-        fetch('/api/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Success:', data);
-            alert('Data successfully added to database!');
-            // Reset the form
-            document.getElementById('insertForm').reset();
-            // Clear column fields
-            document.getElementById('columnFields').innerHTML = '';
-            // Hide submit button
-            document.getElementById('submitButtonContainer').style.display = 'none';
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            alert('There was an error adding the data. Please try again.');
-        });
+  document.getElementById('deleteTableDropdown').addEventListener('change', function () {
+    const hasTable = this.value !== '';
+    document.getElementById('deletePrimaryKeyField').style.display = hasTable ? 'block' : 'none';
+    document.getElementById('deleteSubmitButtonContainer').style.display = hasTable ? 'block' : 'none';
+  });
+
+  document.getElementById('deleteForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const table = document.getElementById('deleteTableDropdown').value;
+    const pkValue = document.getElementById('primaryKey').value;
+    if (!table || !pkValue) return alert('Please complete all fields.');
+    const pkCol = tableStructure[table].find(c => c.isPrimaryKey)?.name;
+    if (!pkCol) return alert('Primary key not found.');
+    fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, primaryKeyColumn: pkCol, primaryKeyValue: pkValue })
+    }).then(res => res.json()).then(data => {
+      alert(data.message);
+      document.getElementById('deleteForm').reset();
+      document.getElementById('deletePrimaryKeyField').style.display = 'none';
+      document.getElementById('deleteSubmitButtonContainer').style.display = 'none';
+    }).catch(err => {
+      console.error(err);
+      alert('Error deleting data.');
     });
+  });
 </script>
-</body>
-</html>
 {% endblock %}

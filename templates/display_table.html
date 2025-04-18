@@ -2,58 +2,49 @@
 <html>
 <head>
     <title>{{ table_name }} Table</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-    </style>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
 </head>
-<body>
-    <div class="container">
-        <h1>{{ table_name }} Table</h1>
-        
-        <table>
-            <thead>
-                <tr>
-                    {% for column in columns %}
-                    <th>{{ column }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in records %}
-                <tr>
-                    {% for column in columns %}
-                    <td>{{ record[column] }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <p><a href="/">Back to Home</a></p>
+<body class="bg-light text-dark">
+  <div class="container my-4">
+    <h1 class="text-center mb-4">{{ table_name.replace('_', ' ').title() }} Table</h1>
+
+    <div class="table-responsive shadow-sm">
+      <table class="table table-striped table-bordered align-middle">
+        <thead class="table-primary">
+          <tr>
+            {% for column in columns %}
+              <th>{{ column.replace('_', ' ').title() }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+            <tr>
+              {% for column in columns %}
+                <td>
+                  {% if column == "THUMBNAIL" %}
+                    <img src="{{ record[column] }}" alt="thumbnail" style="max-height: 80px; border-radius: 5px;">
+                  {% else %}
+                    {{ record[column] }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+
+    <div class="text-center mt-4">
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+  </div>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
 </body>
 </html>
