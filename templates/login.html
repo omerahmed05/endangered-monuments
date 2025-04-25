@@ -1,33 +1,96 @@
-{% extends "base.html" %}
-{% block content %}
-  <div class="row justify-content-center">
-    <div class="col-md-5">
-      <div class="card shadow-sm mb-5">
-        <div class="card-header text-center">
-          <h2>Login</h2>
-        </div>
-        <div class="card-body">
-          <form method="post" novalidate>
-            <div class="mb-3">
-              <label for="role" class="form-label">Role</label>
-              <select id="role" name="role" class="form-select" required>
-                <option value="">— Select Role —</option>
-                <option value="researcher">Researcher</option>
-                <option value="archaeologist">Archaeologist</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="USERNAME" class="form-label">Username</label>
-              <input id="USERNAME" name="USERNAME" type="text" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label for="PASSWORD" class="form-label">Password</label>
-              <input id="PASSWORD" name="PASSWORD" type="password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-success w-100">Log In</button>
-          </form>
-        </div>
-      </div>
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Login Portal</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f2f2f2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .login-container {
+        background-color: #fff;
+        padding: 2em;
+        border-radius: 20px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 400px;
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 1.5em;
+        color: #333;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5em;
+        color: #555;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      select {
+        width: 100%;
+        padding: 0.8em;
+        margin-bottom: 1.2em;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        box-sizing: border-box;
+      }
+
+      button {
+        width: 100%;
+        padding: 0.8em;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1em;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 1.5em;
+        font-size: 0.9em;
+        color: #999;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="login-container">
+      <h2>Portal Login</h2>
+      <form action="/login" method="post">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+
+        <label for="role">Select Role</label>
+        <select id="role" name="role" required>
+          <option value="">Choose your role</option>
+          <option value="admin">Admin </option>
+          <option value="archaeologist">Archaeologist </option>
+          <option value="researcher">Researcher </option>
+        </select>
+
+        <button type="submit">Login</button>
+      </form>
     </div>
-  </div>
-{% endblock %}
+
+  </body>
+  </html>
