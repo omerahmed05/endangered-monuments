@@ -173,30 +173,46 @@ def status():
 
 @app.route('/signup/<role>', methods=['GET','POST'])
 def signup(role):
+    # 1) normalize incoming role
+    role = role.lower()
+    if role not in SIGNUP_FIELDS:
+        abort(404)
 
     if request.method == 'POST':
         data = {}
-        print(SIGNUP_FIELDS[role])
-        # collect & hash password
         for field in SIGNUP_FIELDS[role]:
-            val = request.form.get(field['name'])
-            #print(val)
-            if not val and field['required']:
+            # only gather fields the form actually shows you
+            if not field.get('display', True):
+                continue
+
+            val = request.form.get(field['name'], '').strip()
+            if field.get('required') and not val:
                 flash(f"{field['name']} is required", "error")
                 return redirect(request.url)
             data[field['name']] = val
 
-        # hash the password
-        data['PASSWORD'] = generate_password_hash(data['PASSWORD'],method='pbkdf2:sha256')
+        # hash the password (only if present)
+        if 'PASSWORD' in data:
+            data['PASSWORD'] = generate_password_hash(
+                data['PASSWORD'],
+                method='pbkdf2:sha256'
+            )
 
-        # build INSERT
-        table = role.upper()
+        # 2) map role to a concrete table name
+        if role == 'researcher':
+            table_name = 'RESEARCHER'
+        elif role == 'archaeologist':
+            table_name = 'ARCHAEOLOGIST'
+        else:
+            abort(400)
+
+        # 3) build & execute the INSERT
         cols = ", ".join(data.keys())
         placeholders = ", ".join(["%s"] * len(data))
-        sql = f"INSERT INTO {table} ({cols}) VALUES ({placeholders})"
+        sql = f"INSERT INTO {table_name} ({cols}) VALUES ({placeholders})"
 
         conn = mysql.connector.connect(**config)
-        cursor = conn.cursor()
+        cursor = conn.cursor(buffered=True)   # buffered to avoid unread‐result errors
         cursor.execute(sql, list(data.values()))
         conn.commit()
         cursor.close()
@@ -205,7 +221,7 @@ def signup(role):
         flash("Signup successful! Please log in.", "success")
         return redirect(url_for('login'))
 
-    # GET → render form
+    # GET → render the signup form
     return render_template('signup.html',
                            role=role,
                            fields=SIGNUP_FIELDS[role])
@@ -245,6 +261,135 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
+
+@app.route('/change_password', methods=['GET','POST'])
+def change_password():
+    # 1) ensure the user is logged in
+    if 'user_id' not in session:
+        flash("You must be logged in to change your password", "error")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        old_pw     = request.form.get('old_password')
+        new_pw     = request.form.get('new_password')
+        confirm_pw = request.form.get('confirm_password')
+
+        # 2) basic form validation
+        if not old_pw or not new_pw or not confirm_pw:
+            flash("All fields are required", "error")
+            return redirect(request.url)
+        if new_pw != confirm_pw:
+            flash("New password and confirmation do not match", "error")
+            return redirect(request.url)
+
+        # 3) fetch the user’s current hash from the DB
+        conn = mysql.connector.connect(**config)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT PASSWORD FROM {} WHERE {}_ID = %s"
+            .format(session['role'].upper(), session['role'].upper()),
+            (session['user_id'],)
+        )
+        user = cursor.fetchone()
+        cursor.close()
+
+        # 4) verify old password
+        if not user or not check_password_hash(user['PASSWORD'], old_pw):
+            flash("Old password is incorrect", "error")
+            return redirect(request.url)
+
+        # 5) hash and store the new password
+        new_hash = generate_password_hash(new_pw, method='pbkdf2:sha256')
+        conn = mysql.connector.connect(**config)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE {} SET PASSWORD = %s WHERE {}_ID = %s"
+            .format(session['role'].upper(), session['role'].upper()),
+            (new_hash, session['user_id'])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Your password has been updated!", "success")
+        return redirect(url_for('index'))
+
+    # GET → render a simple form
+    return render_template('change_password.html')
+
+from flask import session, redirect, url_for, flash
+
+@app.route('/logout')
+def logout():
+    # 1) Remove any user info from the session
+    session.pop('user_id', None)
+    session.pop('role',    None)
+    # 2) Give a quick message
+    flash("You have been logged out.", "success")
+    # 3) Send them back home (or to your login page)
+    return redirect(url_for('index'))
+
+@app.route('/create_admin', methods=['GET','POST'])
+def create_admin():
+    # only archaeologist-admins allowed
+    if session.get('role') != 'archaeologist':
+        abort(403)
+
+    # forward to your signup view with role='archaeologist'
+    return signup('archaeologist')
+
+@app.route('/manager_view')
+def manager_view():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM RESEARCHER")
+    researchers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('manager_view.html',
+                           researchers=researchers)
+
+@app.route('/edit_researcher/<int:researcher_id>', methods=['GET','POST'])
+def edit_researcher(researcher_id):
+    if session.get('role') != 'archaeologist':
+        abort(403)
+
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        # build update from form
+        data = { key: request.form[key]
+                 for key in request.form
+                 if key != 'RESEARCHER_ID' }
+        cols = ", ".join(f"{k}=%s" for k in data)
+        vals = list(data.values()) + [researcher_id]
+        sql = f"UPDATE RESEARCHER SET {cols} WHERE RESEARCHER_ID = %s"
+        cursor.execute(sql, vals)
+        conn.commit()
+        flash("Researcher updated", "success")
+        cursor.close()
+        conn.close()
+        return redirect(url_for('manager_view'))
+
+    # GET: fetch record and columns
+    cursor.execute("SHOW COLUMNS FROM RESEARCHER")
+    columns = [c['Field'] for c in cursor.fetchall()]
+    cursor.execute(
+        "SELECT * FROM RESEARCHER WHERE RESEARCHER_ID = %s",
+        (researcher_id,)
+    )
+    researcher = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    return render_template('edit_researcher.html',
+                           researcher=researcher,
+                           columns=columns)
 
 if __name__ == '__main__':
     #print(app.url_map)

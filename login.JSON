@@ -1,26 +1,25 @@
 {
     "RESEARCHER": [
-      {"name":"RESEARCHER_ID","type":"number","required":true,"isPrimaryKey":true},
-      {"name":"PASSWORD","type":"text","required":true},
-      {"name":"URL","type":"text","required":true},
-      {"name":"USERNAME","type":"text","required":true},
-      {"name":"PHONE_NUMBER","type":"text","required":true},
-      {"name":"MAIL_ADDRESS","type":"text","required":true},
-      {"name":"EMAIL_ADDRESS","type":"text","required":true},
-      {"name":"START_DATE","type":"date","required":true},
-      {"name":"EXCAVATION_ID","type":"number","required":true,"isForeignKey":true},
-      {"name":"MANAGER","type":"number","required":true,"isForeignKey":true},
-      {"name":"CONTRIBUTOR","type":"text","required":true}
+      {"name":"RESEARCHER_ID","type":"number","required":false,"isPrimaryKey":true, "display": false},
+      {"name":"PASSWORD","type":"text","required":true, "display" :true},
+      {"name":"URL","type":"text","required":false, "display" :true},
+      {"name":"USERNAME","type":"text","required":true, "display" :true},
+      {"name":"PHONE_NUMBER","type":"text","required":false, "display" :true},
+      {"name":"MAIL_ADDRESS","type":"text","required":false, "display" :true},
+      {"name":"EMAIL_ADDRESS","type":"text","required":false, "display" :true},
+      {"name":"START_DATE","type":"date","required":false, "display" :true},
+      {"name":"EXCAVATION_ID","type":"number","required":true,"isForeignKey":true, "display" :true},
+      {"name":"MANAGER","type":"number","required":false,"isForeignKey":true, "display" :true}
     ],
     "ARCHAEOLOGIST": [
-      {"name":"ARCHAEOLOGIST_ID","type":"number","required":false,"isPrimaryKey":true},
-      {"name":"PASSWORD","type":"text","required":true},
-      {"name":"EXCAVATION_ID","type":"number","required":true,"isForeignKey":true},
-      {"name":"USERNAME","type":"text","required":true},
-      {"name":"EMAIL_ADDRESS","type":"text","required":true},
-      {"name":"MAIL_ADDRESS","type":"text","required":false},
-      {"name":"PHONE_NUMBER","type":"text","required":false},
-      {"name":"START_DATE","type":"date","required":true}
+      {"name":"ARCHAEOLOGIST_ID","type":"number","required":false,"isPrimaryKey":true, "display" :false},
+      {"name":"PASSWORD","type":"text","required":true, "display" :true},
+      {"name":"EXCAVATION_ID","type":"number","required":false,"isForeignKey":true, "display" :true},
+      {"name":"USERNAME","type":"text","required":true, "display" :true},
+      {"name":"EMAIL_ADDRESS","type":"text","required":false, "display" :true},
+      {"name":"MAIL_ADDRESS","type":"text","required":false, "display" :true},
+      {"name":"PHONE_NUMBER","type":"text","required":false, "display" :true},
+      {"name":"START_DATE","type":"date","required":true, "display" :true}
     ]
 
   }
