@@ -66,33 +66,16 @@
           </li>
         
           {% if not session.get('user_id') %}
-            <!-- Sign Up dropdown for guests -->
-            <li class="nav-item dropdown">
-              <a
-                class="nav-link dropdown-toggle"
-                href="#"
-                id="signupDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Sign Up
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="signupDropdown">
-                <li>
-                  <a class="dropdown-item" href="{{ url_for('signup', role='researcher') }}">
-                    Researcher
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{{ url_for('signup', role='archaeologist') }}">
-                    Archaeologist
-                  </a>
-                </li>
-              </ul>
+            <!-- Guest: can browse, sign up as researcher, or log in -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('guest_home') }}">Browse Monuments</a>
             </li>
-        
-            <!-- Login link -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('display_table', table_name='CITY') }}">Browse Cities</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('signup', role='researcher') }}">Sign Up</a>
+            </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('login') }}">Login</a>
             </li>

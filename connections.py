@@ -10,6 +10,7 @@ When this program is ran using python connections.py, flask starts a web server 
 """
 app = Flask(__name__)
 app.secret_key = 'a-very-secret-key'
+app.config['SESSION_PERMANENT'] = False
 # Load your JSON file exactly once
 HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, 'login.JSON'), 'r') as f:
@@ -31,8 +32,12 @@ When someone visits the root URL (e.g. localhost:5000), this function returns th
 """
 @app.route('/')
 def index():
+    # Guests get the public guest home
+    if 'user_id' not in session:
+        return redirect(url_for('guest_home'))
+    # Everyone else sees the same index page
     return render_template('index.html')
-
+    
 """
 Accepts submissions from index.html and adds it to the DBMS
 """
@@ -230,6 +235,7 @@ def signup(role):
 def login():
     print("xx")
     if request.method == 'POST':
+        session.permanent = False
         role     = request.form.get('role', '').lower()
         username = request.form.get('USERNAME')
         password = request.form.get('PASSWORD')
@@ -391,6 +397,34 @@ def edit_researcher(researcher_id):
                            researcher=researcher,
                            columns=columns)
 
+@app.route('/guest')
+def guest_home():
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+      SELECT
+        m.MONUMENT_ID,
+        m.NAME        AS monument_name,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        c.NAME        AS city_name,
+        GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+      FROM MONUMENT m
+      JOIN CITY c
+        ON m.CITY_ID = c.CITY_ID
+      LEFT JOIN RESEARCHER r
+        ON m.EXCAVATION_ID = r.EXCAVATION_ID
+      GROUP BY
+        m.MONUMENT_ID, m.NAME, m.ITEM_CATEGORY,
+        m.THUMBNAIL, c.NAME
+      ORDER BY m.MONUMENT_ID;
+    """)
+    monuments = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('guest_home.html',
+                           monuments=monuments)
 if __name__ == '__main__':
     #print(app.url_map)
     app.run(debug=True)

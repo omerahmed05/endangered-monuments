@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container py-5">
+    <h1 class="text-center mb-4">Explore Our Monuments</h1>
+
+    <div class="row g-4">
+      {% for mon in monuments %}
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <img
+              src="{{ mon.THUMBNAIL }}"
+              class="card-img-top"
+              alt="{{ mon.monument_name }}"
+              style="object-fit: cover; height: 200px;"
+            >
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ mon.monument_name }}</h5>
+              <p class="card-text mb-1">
+                <strong>Category:</strong> {{ mon.ITEM_CATEGORY }}
+              </p>
+              <p class="card-text mb-1">
+                <strong>City:</strong> {{ mon.city_name }}
+              </p>
+              <p class="card-text mb-auto">
+                <strong>Researchers:</strong>
+                {{ mon.researcher_names or 'N/A' }}
+              </p>
+              <div class="mt-3">
+                <a
+                  href="{{ url_for('display_table', table_name='MONUMENT') }}"
+                  class="btn btn-primary w-100"
+                >View All Monuments</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

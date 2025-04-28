@@ -2,10 +2,18 @@
 {% block content %}
 <div class="container my-4">
 
+  <!-- MySQL Status -->
+  <header class="py-4 bg-primary text-white mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h1>🔎 Endangered Monuments Dashboard</h1>
+      <div id="status" class="badge bg-light text-dark px-3 py-2">Checking…</div>
+    </div>
+  </header>
+
   <!-- Cards for Viewing Tables -->
   <h2 class="text-center mb-4">Explore the Endangered Monuments Database</h2>
   <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
-    {% for table in ['MONUMENT', 'CITY', 'CONTEXT', 'EXCAVATION_PROJECT', 'RESEARCH', 'RESEARCHER', 'ARCHAEOLOGIST'] %}
+    {% for table in ['MONUMENT', 'CITY', 'EXCAVATION_PROJECT', 'RESEARCHER'] %}
     <div class="col">
       <div class="card h-100 shadow-sm">
         <div class="card-body text-center d-flex flex-column justify-content-between">
@@ -16,9 +24,6 @@
     </div>
     {% endfor %}
   </div>
-
-  <!-- MySQL Status -->
-  <h3 class="text-center mb-3">MySQL Connection Status: <span id="status" class="fw-bold text-success">Checking...</span></h3>
 
   <!-- Add Form -->
   <h4 class="mt-5">Add to Database</h4>
@@ -113,7 +118,6 @@
       {name: 'START_DATE', type: 'date', required: true},
       {name: 'EXCAVATION_ID', type: 'number', required: true, isForeignKey: true},
       {name: 'MANAGER', type: 'number', required: true, isForeignKey: true},
-      {name: 'CONTRIBUTOR', type: 'text', required: true}
     ],
     'RESEARCH': [
       {name: 'EXCAVATION_ID', type: 'number', required: true, isPrimaryKey: true, isForeignKey: true},
