@@ -1,99 +1,132 @@
 {% extends "base.html" %}
-{% block content %}
-  <div class="container py-5">
-    <h1 class="text-center mb-5">Site Statistics</h1>
 
-    <!-- Summary cards -->
-    <div class="row text-center mb-5">
-      <div class="col-md-3 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Monuments</h5>
-            <p class="display-6">{{ total_monuments }}</p>
-          </div>
+{% block title %}Site Statistics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Site Statistics</h1>
+
+    <!-- Overall Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Monuments</h5>
+                    <p class="card-text display-6">{{ total_monuments }}</p>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Researchers</h5>
-            <p class="display-6">{{ total_researchers }}</p>
-          </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Projects</h5>
+                    <p class="card-text display-6">{{ total_projects }}</p>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Archaeologists</h5>
-            <p class="display-6">{{ total_archaeologists }}</p>
-          </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cities</h5>
+                    <p class="card-text display-6">{{ total_cities }}</p>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Projects</h5>
-            <p class="display-6">{{ total_projects }}</p>
-          </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Researchers</h5>
+                    <p class="card-text display-6">{{ total_researchers }}</p>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
     <!-- Monuments by Category -->
-    <h2 class="mt-4">Monuments by Category</h2>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Category</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in monos_by_category %}
-          <tr>
-            <td>{{ row.category }}</td>
-            <td>{{ row.count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Monuments by Category</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in monos_by_category %}
+                        <tr>
+                            <td>{{ category.category }}</td>
+                            <td>{{ category.count }}</td>
+                            <td>{{ category.percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Monuments by City -->
-    <h2 class="mt-5">Monuments by City</h2>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>City</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in monos_by_city %}
-          <tr>
-            <td>{{ row.city }}</td>
-            <td>{{ row.count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Monuments by City</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for city in monos_by_city %}
+                        <tr>
+                            <td>{{ city.city }}</td>
+                            <td>{{ city.count }}</td>
+                            <td>{{ city.percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Researchers per Project -->
-    <h2 class="mt-5">Researchers per Project</h2>
-    <table class="table table-striped mb-5">
-      <thead>
-        <tr>
-          <th>Project</th>
-          <th>Researchers</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in researchers_per_project %}
-          <tr>
-            <td>{{ row.project }}</td>
-            <td>{{ row.count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Researchers per Project</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Researcher Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in researchers_per_project %}
+                        <tr>
+                            <td>{{ project.project }}</td>
+                            <td>{{ project.count }}</td>
+                            <td>{{ project.percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

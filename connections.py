@@ -606,40 +606,54 @@ def statistics():
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor(dictionary=True)
 
-    # Totals
-    cursor.execute("SELECT COUNT(*) AS total_monuments FROM MONUMENT")
+    # Get total counts
+    cursor.execute("SELECT COUNT(*) as total_monuments FROM MONUMENT")
     total_monuments = cursor.fetchone()['total_monuments']
-    cursor.execute("SELECT COUNT(*) AS total_researchers FROM RESEARCHER")
-    total_researchers = cursor.fetchone()['total_researchers']
-    cursor.execute("SELECT COUNT(*) AS total_archaeologists FROM ARCHAEOLOGIST")
-    total_archaeologists = cursor.fetchone()['total_archaeologists']
-    cursor.execute("SELECT COUNT(*) AS total_projects FROM EXCAVATION_PROJECT")
+    
+    cursor.execute("SELECT COUNT(*) as total_projects FROM EXCAVATION_PROJECT")
     total_projects = cursor.fetchone()['total_projects']
+    
+    cursor.execute("SELECT COUNT(*) as total_cities FROM CITY")
+    total_cities = cursor.fetchone()['total_cities']
+    
+    cursor.execute("SELECT COUNT(*) as total_researchers FROM RESEARCHER")
+    total_researchers = cursor.fetchone()['total_researchers']
 
-    # Breakdown: monuments by category
+    # Monuments by Category with percentages
     cursor.execute("""
-      SELECT ITEM_CATEGORY AS category, COUNT(*) AS count
-      FROM MONUMENT
-      GROUP BY ITEM_CATEGORY
+        SELECT 
+            ITEM_CATEGORY as category,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM MONUMENT
+        GROUP BY ITEM_CATEGORY
+        ORDER BY count DESC
     """)
     monos_by_category = cursor.fetchall()
 
-    # Breakdown: monuments by city
+    # Monuments by City with percentages
     cursor.execute("""
-      SELECT c.NAME AS city, COUNT(m.MONUMENT_ID) AS count
-      FROM MONUMENT m
-      JOIN CITY c ON m.CITY_ID = c.CITY_ID
-      GROUP BY c.NAME
+        SELECT 
+            c.NAME as city,
+            COUNT(m.MONUMENT_ID) as count,
+            ROUND(COUNT(m.MONUMENT_ID) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM CITY c
+        LEFT JOIN MONUMENT m ON c.CITY_ID = m.CITY_ID
+        GROUP BY c.CITY_ID, c.NAME
+        ORDER BY count DESC
     """)
     monos_by_city = cursor.fetchall()
 
-    # Breakdown: researchers per excavation project
+    # Researchers per Project with percentages
     cursor.execute("""
-      SELECT p.NAME AS project, COUNT(r.RESEARCHER_ID) AS count
-      FROM EXCAVATION_PROJECT p
-      LEFT JOIN RESEARCHER r
-        ON p.EXCAVATION_ID = r.EXCAVATION_ID
-      GROUP BY p.NAME
+        SELECT 
+            p.NAME as project,
+            COUNT(DISTINCT r.RESEARCHER_ID) as count,
+            ROUND(COUNT(DISTINCT r.RESEARCHER_ID) * 100.0 / (SELECT COUNT(*) FROM RESEARCHER), 1) as percentage
+        FROM EXCAVATION_PROJECT p
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+        GROUP BY p.EXCAVATION_ID, p.NAME
+        ORDER BY count DESC
     """)
     researchers_per_project = cursor.fetchall()
 
@@ -647,13 +661,13 @@ def statistics():
     conn.close()
 
     return render_template('statistics.html',
-                           total_monuments=total_monuments,
-                           total_researchers=total_researchers,
-                           total_archaeologists=total_archaeologists,
-                           total_projects=total_projects,
-                           monos_by_category=monos_by_category,
-                           monos_by_city=monos_by_city,
-                           researchers_per_project=researchers_per_project)
+                         total_monuments=total_monuments,
+                         total_projects=total_projects,
+                         total_cities=total_cities,
+                         total_researchers=total_researchers,
+                         monos_by_category=monos_by_category,
+                         monos_by_city=monos_by_city,
+                         researchers_per_project=researchers_per_project)
 
 @app.route('/admin_statistics')
 def admin_statistics():
@@ -736,19 +750,70 @@ def admin_statistics():
     # 5. Researcher Performance Metrics
     cursor.execute("""
         SELECT 
-            r.USERNAME,
-            COUNT(DISTINCT m.MONUMENT_ID) AS monuments_worked_on,
-            COUNT(DISTINCT p.EXCAVATION_ID) AS projects_involved,
-            COUNT(DISTINCT c.CITY_ID) AS cities_worked_in,
-            SUM(CASE WHEN m.CONDITION_NOTES IS NOT NULL THEN 1 ELSE 0 END) AS documented_monuments
-        FROM RESEARCHER r
-        LEFT JOIN EXCAVATION_PROJECT p ON r.EXCAVATION_ID = p.EXCAVATION_ID
+            p.NAME as project_name,
+            COUNT(DISTINCT r.RESEARCHER_ID) as researcher_count,
+            CASE 
+                WHEN COUNT(DISTINCT r.RESEARCHER_ID) = 0 THEN 0
+                ELSE ROUND(COUNT(m.MONUMENT_ID) * 1.0 / COUNT(DISTINCT r.RESEARCHER_ID), 1)
+            END as monuments_per_researcher
+        FROM EXCAVATION_PROJECT p
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
         LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
-        LEFT JOIN CITY c ON p.CITY_ID = c.CITY_ID
-        GROUP BY r.RESEARCHER_ID, r.USERNAME
-        ORDER BY monuments_worked_on DESC
+        GROUP BY p.EXCAVATION_ID, p.NAME
+        ORDER BY researcher_count DESC
     """)
-    researcher_stats = cursor.fetchall()
+    researcher_activity = cursor.fetchall()
+
+    # Calculate researcher summary statistics
+    cursor.execute("""
+        SELECT 
+            (SELECT COUNT(DISTINCT r.RESEARCHER_ID) FROM RESEARCHER r) as total_researchers,
+            AVG(rc.researcher_count) as avg_researchers_per_project,
+            (SELECT p.NAME 
+             FROM EXCAVATION_PROJECT p
+             LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+             GROUP BY p.EXCAVATION_ID, p.NAME
+             ORDER BY COUNT(DISTINCT r.RESEARCHER_ID) DESC
+             LIMIT 1) as project_with_most_researchers
+        FROM (
+            SELECT p.EXCAVATION_ID, COUNT(DISTINCT r.RESEARCHER_ID) as researcher_count
+            FROM EXCAVATION_PROJECT p
+            LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+            GROUP BY p.EXCAVATION_ID
+        ) AS rc
+    """)
+    researcher_stats = cursor.fetchone()
+    total_researchers = researcher_stats['total_researchers']
+    avg_researchers_per_project = researcher_stats['avg_researchers_per_project'] or 0
+    project_with_most_researchers = researcher_stats['project_with_most_researchers']
+
+    # Monument Documentation
+    cursor.execute("""
+        SELECT 
+            CASE 
+                WHEN m.CONDITION_NOTES IS NULL OR m.CONDITION_NOTES = '' THEN 'Not Documented'
+                ELSE 'Documented'
+            END as status,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM MONUMENT m
+        GROUP BY status
+    """)
+    documentation_status = cursor.fetchall()
+
+    # Calculate documentation summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_documented,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as documentation_rate,
+            AVG(LENGTH(m.CONDITION_NOTES)) as avg_notes_length
+        FROM MONUMENT m
+        WHERE m.CONDITION_NOTES IS NOT NULL AND m.CONDITION_NOTES != ''
+    """)
+    doc_stats = cursor.fetchone()
+    total_documented = doc_stats['total_documented']
+    documentation_rate = doc_stats['documentation_rate'] or 0
+    avg_notes_length = doc_stats['avg_notes_length'] or 0
 
     cursor.close()
     conn.close()
@@ -759,7 +824,14 @@ def admin_statistics():
         project_stats=project_stats,
         city_stats=city_stats,
         category_stats=category_stats,
-        researcher_stats=researcher_stats
+        researcher_activity=researcher_activity,
+        total_researchers=total_researchers,
+        avg_researchers_per_project=avg_researchers_per_project,
+        project_with_most_researchers=project_with_most_researchers,
+        documentation_status=documentation_status,
+        total_documented=total_documented,
+        documentation_rate=documentation_rate,
+        avg_notes_length=avg_notes_length
     )
 
 @app.route('/researcher')
@@ -1197,6 +1269,202 @@ def update_monument_notes():
     finally:
         cursor.close()
         conn.close()
+
+@app.route('/researcher_statistics')
+def researcher_statistics():
+    if 'user_id' not in session or session.get('role') != 'researcher':
+        return redirect(url_for('login'))
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+
+    # Project Distribution
+    cursor.execute("""
+        SELECT 
+            p.NAME as project_name,
+            COUNT(m.MONUMENT_ID) as monument_count,
+            ROUND(COUNT(m.MONUMENT_ID) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM EXCAVATION_PROJECT p
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        GROUP BY p.EXCAVATION_ID, p.NAME
+        ORDER BY monument_count DESC
+    """)
+    project_distribution = cursor.fetchall()
+
+    # Calculate project summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(DISTINCT pc.EXCAVATION_ID) as total_projects,
+            AVG(pc.monument_count) as avg_monuments_per_project,
+            MAX(pc.monument_count) as max_monuments_in_project
+        FROM (
+            SELECT p.EXCAVATION_ID, COUNT(m.MONUMENT_ID) as monument_count
+            FROM EXCAVATION_PROJECT p
+            LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+            GROUP BY p.EXCAVATION_ID
+        ) AS pc
+    """)
+    project_stats = cursor.fetchone()
+    total_projects = project_stats['total_projects']
+    avg_monuments_per_project = project_stats['avg_monuments_per_project'] or 0
+    max_monuments_in_project = project_stats['max_monuments_in_project'] or 0
+
+    # Category Analysis
+    cursor.execute("""
+        SELECT 
+            m.ITEM_CATEGORY as category,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM MONUMENT m
+        GROUP BY m.ITEM_CATEGORY
+        ORDER BY count DESC
+    """)
+    category_distribution = cursor.fetchall()
+
+    # Calculate category summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(DISTINCT m.ITEM_CATEGORY) as total_categories,
+            m.ITEM_CATEGORY as most_common,
+            (SELECT m2.ITEM_CATEGORY FROM MONUMENT m2 GROUP BY m2.ITEM_CATEGORY ORDER BY COUNT(*) ASC LIMIT 1) as least_common
+        FROM MONUMENT m
+        GROUP BY m.ITEM_CATEGORY
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+    """)
+    category_stats = cursor.fetchone()
+    total_categories = category_stats['total_categories']
+    most_common_category = category_stats['most_common']
+    least_common_category = category_stats['least_common']
+
+    # Geographic Distribution
+    cursor.execute("""
+        SELECT 
+            c.NAME as city_name,
+            COUNT(m.MONUMENT_ID) as monument_count,
+            COUNT(DISTINCT m.EXCAVATION_ID) as project_count
+        FROM CITY c
+        LEFT JOIN MONUMENT m ON c.CITY_ID = m.CITY_ID
+        GROUP BY c.CITY_ID, c.NAME
+        ORDER BY monument_count DESC
+    """)
+    city_distribution = cursor.fetchall()
+
+    # Calculate geographic summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(DISTINCT cc.CITY_ID) as total_cities,
+            AVG(cc.monument_count) as avg_monuments_per_city,
+            (SELECT c.NAME 
+             FROM CITY c
+             LEFT JOIN MONUMENT m ON c.CITY_ID = m.CITY_ID
+             GROUP BY c.CITY_ID, c.NAME
+             ORDER BY COUNT(m.MONUMENT_ID) DESC
+             LIMIT 1) as city_with_most_monuments
+        FROM (
+            SELECT c.CITY_ID, COUNT(m.MONUMENT_ID) as monument_count
+            FROM CITY c
+            LEFT JOIN MONUMENT m ON c.CITY_ID = m.CITY_ID
+            GROUP BY c.CITY_ID
+        ) AS cc
+    """)
+    geo_stats = cursor.fetchone()
+    total_cities = geo_stats['total_cities']
+    avg_monuments_per_city = geo_stats['avg_monuments_per_city'] or 0
+    city_with_most_monuments = geo_stats['city_with_most_monuments']
+
+    # Researcher Activity
+    cursor.execute("""
+        SELECT 
+            p.NAME as project_name,
+            COUNT(DISTINCT r.RESEARCHER_ID) as researcher_count,
+            CASE 
+                WHEN COUNT(DISTINCT r.RESEARCHER_ID) = 0 THEN 0
+                ELSE ROUND(COUNT(m.MONUMENT_ID) * 1.0 / COUNT(DISTINCT r.RESEARCHER_ID), 1)
+            END as monuments_per_researcher
+        FROM EXCAVATION_PROJECT p
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        GROUP BY p.EXCAVATION_ID, p.NAME
+        ORDER BY researcher_count DESC
+    """)
+    researcher_activity = cursor.fetchall()
+
+    # Calculate researcher summary statistics
+    cursor.execute("""
+        SELECT 
+            (SELECT COUNT(DISTINCT r.RESEARCHER_ID) FROM RESEARCHER r) as total_researchers,
+            AVG(rc.researcher_count) as avg_researchers_per_project,
+            (SELECT p.NAME 
+             FROM EXCAVATION_PROJECT p
+             LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+             GROUP BY p.EXCAVATION_ID, p.NAME
+             ORDER BY COUNT(DISTINCT r.RESEARCHER_ID) DESC
+             LIMIT 1) as project_with_most_researchers
+        FROM (
+            SELECT p.EXCAVATION_ID, COUNT(DISTINCT r.RESEARCHER_ID) as researcher_count
+            FROM EXCAVATION_PROJECT p
+            LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+            GROUP BY p.EXCAVATION_ID
+        ) AS rc
+    """)
+    researcher_stats = cursor.fetchone()
+    total_researchers = researcher_stats['total_researchers']
+    avg_researchers_per_project = researcher_stats['avg_researchers_per_project'] or 0
+    project_with_most_researchers = researcher_stats['project_with_most_researchers']
+
+    # Monument Documentation
+    cursor.execute("""
+        SELECT 
+            CASE 
+                WHEN m.CONDITION_NOTES IS NULL OR m.CONDITION_NOTES = '' THEN 'Not Documented'
+                ELSE 'Documented'
+            END as status,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as percentage
+        FROM MONUMENT m
+        GROUP BY status
+    """)
+    documentation_status = cursor.fetchall()
+
+    # Calculate documentation summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_documented,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM MONUMENT), 1) as documentation_rate,
+            AVG(LENGTH(m.CONDITION_NOTES)) as avg_notes_length
+        FROM MONUMENT m
+        WHERE m.CONDITION_NOTES IS NOT NULL AND m.CONDITION_NOTES != ''
+    """)
+    doc_stats = cursor.fetchone()
+    total_documented = doc_stats['total_documented']
+    documentation_rate = doc_stats['documentation_rate'] or 0
+    avg_notes_length = doc_stats['avg_notes_length'] or 0
+
+    cursor.close()
+    conn.close()
+
+    return render_template('researcher_statistics.html',
+                         project_distribution=project_distribution,
+                         total_projects=total_projects,
+                         avg_monuments_per_project=avg_monuments_per_project,
+                         max_monuments_in_project=max_monuments_in_project,
+                         category_distribution=category_distribution,
+                         total_categories=total_categories,
+                         most_common_category=most_common_category,
+                         least_common_category=least_common_category,
+                         city_distribution=city_distribution,
+                         total_cities=total_cities,
+                         avg_monuments_per_city=avg_monuments_per_city,
+                         city_with_most_monuments=city_with_most_monuments,
+                         researcher_activity=researcher_activity,
+                         total_researchers=total_researchers,
+                         avg_researchers_per_project=avg_researchers_per_project,
+                         project_with_most_researchers=project_with_most_researchers,
+                         documentation_status=documentation_status,
+                         total_documented=total_documented,
+                         documentation_rate=documentation_rate,
+                         avg_notes_length=avg_notes_length)
 
 if __name__ == '__main__':
     #print(app.url_map)

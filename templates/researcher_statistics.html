@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Researcher Statistics{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5">Researcher Statistics</h1>
+
+    <!-- Project Distribution -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Project Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Monuments by Project</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Monument Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in project_distribution %}
+                            <tr>
+                                <td>{{ stat.project_name }}</td>
+                                <td>{{ stat.monument_count }}</td>
+                                <td>{{ "%.1f"|format(stat.percentage) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Summary</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Projects
+                            <span class="badge bg-primary rounded-pill">{{ total_projects }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Average Monuments per Project
+                            <span class="badge bg-primary rounded-pill">{{ "%.1f"|format(avg_monuments_per_project) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Most Monuments in a Project
+                            <span class="badge bg-primary rounded-pill">{{ max_monuments_in_project }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Monument Categories</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Category Distribution</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in category_distribution %}
+                            <tr>
+                                <td>{{ stat.category }}</td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ "%.1f"|format(stat.percentage) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Summary</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Categories
+                            <span class="badge bg-primary rounded-pill">{{ total_categories }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Most Common Category
+                            <span class="badge bg-primary rounded-pill">{{ most_common_category }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Least Common Category
+                            <span class="badge bg-primary rounded-pill">{{ least_common_category }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geographic Distribution -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Geographic Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Monuments by City</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>City</th>
+                                <th>Monument Count</th>
+                                <th>Projects</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in city_distribution %}
+                            <tr>
+                                <td>{{ stat.city_name }}</td>
+                                <td>{{ stat.monument_count }}</td>
+                                <td>{{ stat.project_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Summary</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Cities
+                            <span class="badge bg-primary rounded-pill">{{ total_cities }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Average Monuments per City
+                            <span class="badge bg-primary rounded-pill">{{ "%.1f"|format(avg_monuments_per_city) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            City with Most Monuments
+                            <span class="badge bg-primary rounded-pill">{{ city_with_most_monuments }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Researcher Activity -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Researcher Activity</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Researchers per Project</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Researcher Count</th>
+                                <th>Monuments per Researcher</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in researcher_activity %}
+                            <tr>
+                                <td>{{ stat.project_name }}</td>
+                                <td>{{ stat.researcher_count }}</td>
+                                <td>{{ "%.1f"|format(stat.monuments_per_researcher) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Summary</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Researchers
+                            <span class="badge bg-primary rounded-pill">{{ total_researchers }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Average Researchers per Project
+                            <span class="badge bg-primary rounded-pill">{{ "%.1f"|format(avg_researchers_per_project) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Project with Most Researchers
+                            <span class="badge bg-primary rounded-pill">{{ project_with_most_researchers }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monument Documentation -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Monument Documentation</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Documentation Status</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in documentation_status %}
+                            <tr>
+                                <td>{{ stat.status }}</td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ "%.1f"|format(stat.percentage) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Summary</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Documented Monuments
+                            <span class="badge bg-primary rounded-pill">{{ total_documented }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Documentation Rate
+                            <span class="badge bg-primary rounded-pill">{{ "%.1f"|format(documentation_rate) }}%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Average Notes Length
+                            <span class="badge bg-primary rounded-pill">{{ "%.1f"|format(avg_notes_length) }} chars</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
