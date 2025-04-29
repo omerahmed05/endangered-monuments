@@ -1,45 +1,100 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="container py-5">
-    <h1 class="text-center mb-4">Explore Our Monuments</h1>
-
-    <div class="row g-4">
-      {% for mon in monuments %}
-        <div class="col-md-4">
-          <div class="card h-100 shadow-sm">
-            <img
-              src="{{ mon.THUMBNAIL }}"
-              class="card-img-top"
-              alt="{{ mon.monument_name }}"
-              style="object-fit: cover; height: 200px;"
-            >
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">{{ mon.monument_name }}</h5>
-
-              <!-- Badges for category & city -->
-              <div class="mb-3">
-                <span class="badge bg-secondary me-1">{{ mon.ITEM_CATEGORY }}</span>
-                <span class="badge bg-success text-white">{{ mon.project_name }}</span>
-                <span class="badge bg-info text-dark">{{ mon.city_name }}</span>
-              </div>
-
-              <!-- Researcher list -->
-              <p class="card-text flex-grow-1">
-                <strong>Researchers:</strong>
-                {{ mon.researcher_names or 'N/A' }}
-              </p>
-            </div>
-
-            <!-- Card footer with the new button -->
-            <div class="card-footer bg-transparent border-top-0">
-              <a
-                href="{{ url_for('monument_detail', monument_id=mon.MONUMENT_ID) }}"
-                class="btn btn-primary w-100"
-              >View More Info</a>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
+<div class="container py-5">
+  <!-- Hero Section -->
+  <div class="row align-items-center mb-5">
+    <div class="col-md-6">
+      <h1 class="display-4 fw-bold mb-4">Welcome to Endangered Monuments</h1>
+      <p class="lead mb-4">
+        Discover and explore ancient monuments from around the world. Our platform brings together archaeologists, researchers, and enthusiasts to document and preserve our shared cultural heritage.
+      </p>
+      <div class="d-grid gap-2 d-md-flex">
+        <a href="{{ url_for('guest_excavations') }}" class="btn btn-primary btn-lg me-md-2">
+          Explore Excavation Projects
+        </a>
+        <a href="{{ url_for('monuments') }}" class="btn btn-outline-primary btn-lg">
+          Browse Monuments
+        </a>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <img src="https://images.unsplash.com/photo-1511527661048-7fe73d85e9a4?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
+           class="img-fluid rounded shadow" 
+           alt="Ancient Monument">
     </div>
   </div>
+
+  <!-- Features Section -->
+  <div class="row mb-5">
+    <div class="col-12 text-center mb-4">
+      <h2 class="fw-bold">What You Can Do</h2>
+    </div>
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-search fa-3x mb-3 text-primary"></i>
+          <h3 class="card-title">Explore</h3>
+          <p class="card-text">Browse through our extensive collection of monuments and excavation projects from around the world.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-map-marked-alt fa-3x mb-3 text-primary"></i>
+          <h3 class="card-title">Discover</h3>
+          <p class="card-text">Learn about the location, history, and significance of each monument in our database.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-users fa-3x mb-3 text-primary"></i>
+          <h3 class="card-title">Connect</h3>
+          <p class="card-text">See the researchers and archaeologists working on each project and monument.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="row mb-5">
+    <div class="col-12 text-center mb-4">
+      <h2 class="fw-bold">Our Collection</h2>
+    </div>
+    <div class="col-md-3 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="display-4 fw-bold text-primary">{{ total_monuments }}</h3>
+          <p class="card-text">Monuments</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="display-4 fw-bold text-primary">{{ total_projects }}</h3>
+          <p class="card-text">Excavation Projects</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="display-4 fw-bold text-primary">{{ total_cities }}</h3>
+          <p class="card-text">Cities</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="display-4 fw-bold text-primary">{{ total_researchers }}</h3>
+          <p class="card-text">Researchers</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

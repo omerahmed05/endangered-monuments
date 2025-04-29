@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, abort, make_response
+
+
 import mysql.connector
 from mysql.connector import Error
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -35,9 +37,15 @@ def index():
     # Guests get the public guest home
     if 'user_id' not in session:
         return redirect(url_for('guest_home'))
-    # Everyone else sees the same index page
-    return render_template('index.html')
     
+    # Redirect based on role
+    if session.get('role') == 'archaeologist':
+        return redirect(url_for('archaeologist_home'))
+    elif session.get('role') == 'researcher':
+        return redirect(url_for('researcher_home'))
+    
+    return redirect(url_for('guest_home'))
+
 """
 Accepts submissions from index.html and adds it to the DBMS
 """
@@ -288,7 +296,7 @@ def change_password():
             flash("New password and confirmation do not match", "error")
             return redirect(request.url)
 
-        # 3) fetch the user’s current hash from the DB
+        # 3) fetch the user's current hash from the DB
         conn = mysql.connector.connect(**config)
         cursor = conn.cursor(dictionary=True)
         cursor.execute(
@@ -401,43 +409,62 @@ def edit_researcher(researcher_id):
 def guest_home():
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor(dictionary=True)
+    
+    # Get total counts for statistics
+    cursor.execute("SELECT COUNT(*) AS count FROM MONUMENT")
+    total_monuments = cursor.fetchone()['count']
+    
+    cursor.execute("SELECT COUNT(*) AS count FROM EXCAVATION_PROJECT")
+    total_projects = cursor.fetchone()['count']
+    
+    cursor.execute("SELECT COUNT(*) AS count FROM CITY")
+    total_cities = cursor.fetchone()['count']
+    
+    cursor.execute("SELECT COUNT(*) AS count FROM RESEARCHER")
+    total_researchers = cursor.fetchone()['count']
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('guest_home.html',
+                         total_monuments=total_monuments,
+                         total_projects=total_projects,
+                         total_cities=total_cities,
+                         total_researchers=total_researchers)
 
+@app.route('/monuments')
+def monuments():
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
     cursor.execute("""
       SELECT
         m.MONUMENT_ID,
         m.NAME               AS monument_name,
         m.ITEM_CATEGORY,
         m.THUMBNAIL,
-        c.NAME               AS city_name,        -- added
+        c.NAME               AS city_name,
         p.NAME               AS project_name,
         GROUP_CONCAT(r.USERNAME SEPARATOR ', ')
           AS researcher_names
       FROM MONUMENT m
-
-      JOIN CITY c
-        ON m.CITY_ID = c.CITY_ID                -- join CITY
-
-      JOIN EXCAVATION_PROJECT p
-        ON m.EXCAVATION_ID = p.EXCAVATION_ID    -- join PROJECT
-
-      LEFT JOIN RESEARCHER r
-        ON m.EXCAVATION_ID = r.EXCAVATION_ID
-
+      JOIN CITY c ON m.CITY_ID = c.CITY_ID
+      JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+      LEFT JOIN RESEARCHER r ON m.EXCAVATION_ID = r.EXCAVATION_ID
       GROUP BY
         m.MONUMENT_ID,
         m.NAME,
         m.ITEM_CATEGORY,
         m.THUMBNAIL,
-        c.NAME,                                  -- include city in GROUP BY
+        c.NAME,
         p.NAME
-
-      ORDER BY m.MONUMENT_ID;
+      ORDER BY m.MONUMENT_ID
     """)
     monuments = cursor.fetchall()
     cursor.close()
     conn.close()
-
-    return render_template('guest_home.html', monuments=monuments)
+    
+    return render_template('monuments.html', monuments=monuments)
 
 @app.route('/monument/<int:monument_id>')
 def monument_detail(monument_id):
@@ -506,7 +533,7 @@ def excavation_detail(excavation_id):
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor(dictionary=True)
 
-    # First, get the project’s own name
+    # First, get the project's own name
     cursor.execute(
       "SELECT NAME AS project_name FROM EXCAVATION_PROJECT WHERE EXCAVATION_ID = %s",
       (excavation_id,)
@@ -597,6 +624,412 @@ def statistics():
                            monos_by_category=monos_by_category,
                            monos_by_city=monos_by_city,
                            researchers_per_project=researchers_per_project)
+
+@app.route('/researcher')
+def researcher_home():
+    if session.get('role') != 'researcher':
+        abort(403)
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get monuments with their details
+    cursor.execute("""
+      SELECT
+        m.MONUMENT_ID,
+        m.NAME               AS monument_name,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        c.NAME               AS city_name,
+        p.NAME               AS project_name,
+        GROUP_CONCAT(r.USERNAME SEPARATOR ', ')
+          AS researcher_names
+      FROM MONUMENT m
+      JOIN CITY c ON m.CITY_ID = c.CITY_ID
+      JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+      LEFT JOIN RESEARCHER r ON m.EXCAVATION_ID = r.EXCAVATION_ID
+      GROUP BY
+        m.MONUMENT_ID,
+        m.NAME,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        c.NAME,
+        p.NAME
+      ORDER BY m.MONUMENT_ID
+    """)
+    monuments = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return render_template('researcher_home.html', monuments=monuments)
+
+@app.route('/archaeologist')
+def archaeologist_home():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get recent monuments
+    cursor.execute("""
+      SELECT
+        m.MONUMENT_ID,
+        m.NAME AS monument_name,
+        c.NAME AS city_name,
+        p.NAME AS project_name
+      FROM MONUMENT m
+      JOIN CITY c ON m.CITY_ID = c.CITY_ID
+      JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+      ORDER BY m.MONUMENT_ID DESC
+      LIMIT 5
+    """)
+    recent_monuments = cursor.fetchall()
+    
+    # Get recent researchers
+    cursor.execute("""
+      SELECT RESEARCHER_ID, USERNAME, START_DATE
+      FROM RESEARCHER
+      ORDER BY START_DATE DESC
+      LIMIT 5
+    """)
+    recent_researchers = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('archaeologist_home.html',
+                         recent_monuments=recent_monuments,
+                         recent_researchers=recent_researchers)
+
+@app.route('/api/bookmark', methods=['POST', 'DELETE'])
+def bookmark_monument():
+    if session.get('role') != 'researcher':
+        abort(403)
+    
+    data = request.json
+    monument_id = data.get('monument_id')
+    researcher_id = session.get('user_id')
+    
+    if not monument_id or not researcher_id:
+        return jsonify({'success': False, 'message': 'Missing required data'})
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor()
+    
+    try:
+        if request.method == 'POST':
+            # Check if bookmark already exists
+            cursor.execute("""
+                SELECT 1 FROM BOOKMARK 
+                WHERE RESEARCHER_ID = %s AND MONUMENT_ID = %s
+            """, (researcher_id, monument_id))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Monument already bookmarked'})
+            
+            # Add new bookmark
+            cursor.execute("""
+                INSERT INTO BOOKMARK (RESEARCHER_ID, MONUMENT_ID)
+                VALUES (%s, %s)
+            """, (researcher_id, monument_id))
+            message = 'Bookmark added successfully'
+        else:  # DELETE
+            cursor.execute("""
+                DELETE FROM BOOKMARK 
+                WHERE RESEARCHER_ID = %s AND MONUMENT_ID = %s
+            """, (researcher_id, monument_id))
+            message = 'Bookmark removed successfully'
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': message})
+    except mysql.connector.Error as err:
+        return jsonify({'success': False, 'message': str(err)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/export', methods=['POST'])
+def export_monument():
+    if session.get('role') != 'researcher':
+        abort(403)
+    
+    data = request.json
+    monument_id = data.get('monument_id')
+    
+    if not monument_id:
+        return jsonify({'success': False, 'message': 'Missing monument ID'})
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT
+                m.*,
+                c.NAME AS city_name,
+                p.NAME AS project_name,
+                GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+            FROM MONUMENT m
+            JOIN CITY c ON m.CITY_ID = c.CITY_ID
+            JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+            LEFT JOIN RESEARCHER r ON m.EXCAVATION_ID = r.EXCAVATION_ID
+            WHERE m.MONUMENT_ID = %s
+            GROUP BY m.MONUMENT_ID
+        """, (monument_id,))
+        
+        monument_data = cursor.fetchone()
+        if not monument_data:
+            return jsonify({'success': False, 'message': 'Monument not found'})
+        
+        # Convert to JSON and return as file
+        response = make_response(json.dumps(monument_data, indent=2))
+        response.headers['Content-Type'] = 'application/json'
+        response.headers['Content-Disposition'] = f'attachment; filename=monument_{monument_id}_data.json'
+        return response
+    except mysql.connector.Error as err:
+        return jsonify({'success': False, 'message': str(err)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/my_bookmarks')
+def my_bookmarks():
+    if session.get('role') != 'researcher':
+        abort(403)
+    
+    researcher_id = session.get('user_id')
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    cursor.execute("""
+        SELECT
+            m.MONUMENT_ID,
+            m.NAME AS monument_name,
+            m.ITEM_CATEGORY,
+            m.THUMBNAIL,
+            c.NAME AS city_name,
+            p.NAME AS project_name,
+            GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+        FROM BOOKMARK b
+        JOIN MONUMENT m ON b.MONUMENT_ID = m.MONUMENT_ID
+        JOIN CITY c ON m.CITY_ID = c.CITY_ID
+        JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+        LEFT JOIN RESEARCHER r ON m.EXCAVATION_ID = r.EXCAVATION_ID
+        WHERE b.RESEARCHER_ID = %s
+        GROUP BY m.MONUMENT_ID
+        ORDER BY m.MONUMENT_ID
+    """, (researcher_id,))
+    
+    bookmarks = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return render_template('my_bookmarks.html', bookmarks=bookmarks)
+
+@app.route('/manage_monuments')
+def manage_monuments():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get all monuments with their details
+    cursor.execute("""
+        SELECT
+            m.MONUMENT_ID,
+            m.NAME AS monument_name,
+            m.ITEM_CATEGORY,
+            m.THUMBNAIL,
+            m.LATITUDE,
+            m.LONGITUDE,
+            c.NAME AS city_name,
+            p.NAME AS project_name,
+            GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+        FROM MONUMENT m
+        JOIN CITY c ON m.CITY_ID = c.CITY_ID
+        JOIN EXCAVATION_PROJECT p ON m.EXCAVATION_ID = p.EXCAVATION_ID
+        LEFT JOIN RESEARCHER r ON m.EXCAVATION_ID = r.EXCAVATION_ID
+        GROUP BY m.MONUMENT_ID
+        ORDER BY m.MONUMENT_ID
+    """)
+    monuments = cursor.fetchall()
+    
+    # Get all cities for the add monument form
+    cursor.execute("SELECT CITY_ID, NAME FROM CITY ORDER BY NAME")
+    cities = cursor.fetchall()
+    
+    # Get all excavation projects for the add monument form
+    cursor.execute("SELECT EXCAVATION_ID, NAME FROM EXCAVATION_PROJECT ORDER BY NAME")
+    projects = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_monuments.html',
+                         monuments=monuments,
+                         cities=cities,
+                         projects=projects)
+
+@app.route('/api/monument', methods=['POST', 'PUT', 'DELETE'])
+def handle_monument():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    data = request.json
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor()
+    
+    try:
+        if request.method == 'POST':
+            # Add new monument
+            cursor.execute("""
+                INSERT INTO MONUMENT (
+                    NAME, ITEM_CATEGORY, THUMBNAIL, LATITUDE, LONGITUDE,
+                    CITY_ID, EXCAVATION_ID
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                data.get('name'),
+                data.get('item_category'),
+                data.get('thumbnail'),
+                data.get('latitude'),
+                data.get('longitude'),
+                data.get('city_id'),
+                data.get('excavation_id')
+            ))
+            message = 'Monument added successfully'
+            
+        elif request.method == 'PUT':
+            # Update existing monument
+            cursor.execute("""
+                UPDATE MONUMENT SET
+                    NAME = %s,
+                    ITEM_CATEGORY = %s,
+                    THUMBNAIL = %s,
+                    LATITUDE = %s,
+                    LONGITUDE = %s,
+                    CITY_ID = %s,
+                    EXCAVATION_ID = %s
+                WHERE MONUMENT_ID = %s
+            """, (
+                data.get('name'),
+                data.get('item_category'),
+                data.get('thumbnail'),
+                data.get('latitude'),
+                data.get('longitude'),
+                data.get('city_id'),
+                data.get('excavation_id'),
+                data.get('monument_id')
+            ))
+            message = 'Monument updated successfully'
+            
+        else:  # DELETE
+            # Delete monument
+            cursor.execute("""
+                DELETE FROM MONUMENT WHERE MONUMENT_ID = %s
+            """, (data.get('monument_id'),))
+            message = 'Monument deleted successfully'
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': message})
+        
+    except mysql.connector.Error as err:
+        return jsonify({'success': False, 'message': str(err)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/manage_projects')
+def manage_projects():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get all excavation projects with their details
+    cursor.execute("""
+        SELECT
+            p.EXCAVATION_ID,
+            p.NAME AS project_name,
+            p.PROJECT_URL,
+            c.NAME AS city_name,
+            COUNT(m.MONUMENT_ID) AS monument_count,
+            GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+        FROM EXCAVATION_PROJECT p
+        JOIN CITY c ON p.CITY_ID = c.CITY_ID
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+        GROUP BY p.EXCAVATION_ID
+        ORDER BY p.EXCAVATION_ID
+    """)
+    projects = cursor.fetchall()
+    
+    # Get all cities for the add project form
+    cursor.execute("SELECT CITY_ID, NAME FROM CITY ORDER BY NAME")
+    cities = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_projects.html',
+                         projects=projects,
+                         cities=cities)
+
+@app.route('/api/project', methods=['POST', 'PUT', 'DELETE'])
+def handle_project():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    data = request.json
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor()
+    
+    try:
+        if request.method == 'POST':
+            # Add new project
+            cursor.execute("""
+                INSERT INTO EXCAVATION_PROJECT (
+                    NAME, PROJECT_URL, CITY_ID
+                ) VALUES (%s, %s, %s)
+            """, (
+                data.get('name'),
+                data.get('project_url'),
+                data.get('city_id')
+            ))
+            message = 'Project added successfully'
+            
+        elif request.method == 'PUT':
+            # Update existing project
+            cursor.execute("""
+                UPDATE EXCAVATION_PROJECT SET
+                    NAME = %s,
+                    PROJECT_URL = %s,
+                    CITY_ID = %s
+                WHERE EXCAVATION_ID = %s
+            """, (
+                data.get('name'),
+                data.get('project_url'),
+                data.get('city_id'),
+                data.get('excavation_id')
+            ))
+            message = 'Project updated successfully'
+            
+        else:  # DELETE
+            # Delete project
+            cursor.execute("""
+                DELETE FROM EXCAVATION_PROJECT WHERE EXCAVATION_ID = %s
+            """, (data.get('excavation_id'),))
+            message = 'Project deleted successfully'
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': message})
+        
+    except mysql.connector.Error as err:
+        return jsonify({'success': False, 'message': str(err)})
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
     #print(app.url_map)

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <h1 class="text-center mb-4">Explore Our Monuments</h1>
+
+  <!-- Monuments Grid -->
+  <div class="row g-4">
+    {% for mon in monuments %}
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+          <img src="{{ mon.THUMBNAIL }}"
+               class="card-img-top"
+               alt="{{ mon.monument_name }}"
+               style="object-fit: cover; height: 200px;">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ mon.monument_name }}</h5>
+
+            <!-- Badges for category & city -->
+            <div class="mb-3">
+              <span class="badge bg-secondary me-1">{{ mon.ITEM_CATEGORY }}</span>
+              <span class="badge bg-success text-white">{{ mon.project_name }}</span>
+              <span class="badge bg-info text-dark">{{ mon.city_name }}</span>
+            </div>
+
+            <!-- Researcher list -->
+            <p class="card-text flex-grow-1">
+              <strong>Researchers:</strong>
+              {{ mon.researcher_names or 'N/A' }}
+            </p>
+          </div>
+
+          <!-- Card footer with the new button -->
+          <div class="card-footer bg-transparent border-top-0">
+            <a href="{{ url_for('monument_detail', monument_id=mon.MONUMENT_ID) }}"
+               class="btn btn-primary w-100">
+              View More Info
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %} 
