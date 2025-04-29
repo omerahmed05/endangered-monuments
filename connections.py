@@ -625,6 +625,57 @@ def statistics():
                            monos_by_city=monos_by_city,
                            researchers_per_project=researchers_per_project)
 
+@app.route('/admin_statistics')
+def admin_statistics():
+    # only archaeologist-admins allowed
+    if session.get('role') != 'archaeologist':
+        abort(403)
+
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+
+    # Totals
+    cursor.execute("SELECT COUNT(*) AS total_archaeologists FROM ARCHAEOLOGIST")
+    total_archaeologists = cursor.fetchone()['total_archaeologists']
+
+    cursor.execute("SELECT COUNT(*) AS total_researchers FROM RESEARCHER")
+    total_researchers = cursor.fetchone()['total_researchers']
+
+    # Archaeologists per excavation project
+    cursor.execute("""
+      SELECT
+        p.NAME AS project_name,
+        COUNT(a.ARCHAEOLOGIST_ID) AS archaeologist_count
+      FROM EXCAVATION_PROJECT p
+      LEFT JOIN ARCHAEOLOGIST a
+        ON p.EXCAVATION_ID = a.EXCAVATION_ID
+      GROUP BY p.EXCAVATION_ID, p.NAME
+    """)
+    arch_per_project = cursor.fetchall()
+
+    # Researchers per archaeologist
+    cursor.execute("""
+      SELECT
+        a.USERNAME AS archaeologist,
+        COUNT(r.RESEARCHER_ID) AS researcher_count
+      FROM ARCHAEOLOGIST a
+      LEFT JOIN RESEARCHER r
+        ON a.ARCHAEOLOGIST_ID = r.MANAGER
+      GROUP BY a.ARCHAEOLOGIST_ID, a.USERNAME
+    """)
+    researchers_per_arch = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+      'admin_statistics.html',
+      total_archaeologists=total_archaeologists,
+      total_researchers=total_researchers,
+      arch_per_project=arch_per_project,
+      researchers_per_arch=researchers_per_arch
+    )
+
 @app.route('/researcher')
 def researcher_home():
     if session.get('role') != 'researcher':
