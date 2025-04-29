@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container py-5">
+    <h1 class="text-center mb-5">Admin Statistics</h1>
+
+    <!-- Summary cards -->
+    <div class="row text-center mb-5">
+      <div class="col-md-6 mb-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Total Archaeologists</h5>
+            <p class="display-6">{{ total_archaeologists }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Total Researchers</h5>
+            <p class="display-6">{{ total_researchers }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archaeologists per Project -->
+    <h2 class="mt-4">Archaeologists per Excavation Project</h2>
+    <table class="table table-striped mb-5">
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th># Archaeologists</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in arch_per_project %}
+          <tr>
+            <td>{{ row.project_name }}</td>
+            <td>{{ row.archaeologist_count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Researchers per Archaeologist -->
+    <h2 class="mt-4">Researchers per Archaeologist</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Archaeologist</th>
+          <th># Researchers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in researchers_per_arch %}
+          <tr>
+            <td>{{ row.archaeologist }}</td>
+            <td>{{ row.researcher_count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
