@@ -78,6 +78,9 @@
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('guest_excavations') }}">Browse Excavations</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('statistics') }}">Statistics</a>
+          </li>
         
           {% if not session.get('user_id') %}
             <!-- Guest: can browse, sign up as researcher, or log in -->

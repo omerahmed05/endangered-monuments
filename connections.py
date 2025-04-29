@@ -544,6 +544,59 @@ def excavation_detail(excavation_id):
       monuments=monuments,
       project_name=project_name
     )
+@app.route('/statistics')
+def statistics():
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+
+    # Totals
+    cursor.execute("SELECT COUNT(*) AS total_monuments FROM MONUMENT")
+    total_monuments = cursor.fetchone()['total_monuments']
+    cursor.execute("SELECT COUNT(*) AS total_researchers FROM RESEARCHER")
+    total_researchers = cursor.fetchone()['total_researchers']
+    cursor.execute("SELECT COUNT(*) AS total_archaeologists FROM ARCHAEOLOGIST")
+    total_archaeologists = cursor.fetchone()['total_archaeologists']
+    cursor.execute("SELECT COUNT(*) AS total_projects FROM EXCAVATION_PROJECT")
+    total_projects = cursor.fetchone()['total_projects']
+
+    # Breakdown: monuments by category
+    cursor.execute("""
+      SELECT ITEM_CATEGORY AS category, COUNT(*) AS count
+      FROM MONUMENT
+      GROUP BY ITEM_CATEGORY
+    """)
+    monos_by_category = cursor.fetchall()
+
+    # Breakdown: monuments by city
+    cursor.execute("""
+      SELECT c.NAME AS city, COUNT(m.MONUMENT_ID) AS count
+      FROM MONUMENT m
+      JOIN CITY c ON m.CITY_ID = c.CITY_ID
+      GROUP BY c.NAME
+    """)
+    monos_by_city = cursor.fetchall()
+
+    # Breakdown: researchers per excavation project
+    cursor.execute("""
+      SELECT p.NAME AS project, COUNT(r.RESEARCHER_ID) AS count
+      FROM EXCAVATION_PROJECT p
+      LEFT JOIN RESEARCHER r
+        ON p.EXCAVATION_ID = r.EXCAVATION_ID
+      GROUP BY p.NAME
+    """)
+    researchers_per_project = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('statistics.html',
+                           total_monuments=total_monuments,
+                           total_researchers=total_researchers,
+                           total_archaeologists=total_archaeologists,
+                           total_projects=total_projects,
+                           monos_by_category=monos_by_category,
+                           monos_by_city=monos_by_city,
+                           researchers_per_project=researchers_per_project)
 
 if __name__ == '__main__':
     #print(app.url_map)
