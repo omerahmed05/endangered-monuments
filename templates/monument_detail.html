@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container py-5">
+
+    {# Only show the map if we have coords #}
+    {% if monument.LATITUDE is not none and monument.LONGITUDE is not none %}
+      {# Convert decimals to floats #}
+      {% set lat = monument.LATITUDE|float %}
+      {% set lng = monument.LONGITUDE|float %}
+      {% set delta = 0.5 %}
+
+      {# Compute bounding box entirely in floats #}
+      {% set south = lat - delta %}
+      {% set north = lat + delta %}
+      {% set west  = lng - delta %}
+      {% set east  = lng + delta %}
+
+      <div class="text-center mb-4">
+        <iframe
+          width="100%" height="350"
+          frameborder="0"
+          scrolling="no"
+          src="https://www.openstreetmap.org/export/embed.html?bbox={{ west }},{{ south }},{{ east }},{{ north }}&layer=mapnik&marker={{ lat }},{{ lng }}"
+          style="border:1px solid #ccc;"
+        ></iframe>
+        <br/>
+        <small>
+          <a
+            href="https://www.openstreetmap.org/?mlat={{ lat }}&mlon={{ lng }}#map=10/{{ lat }}/{{ lng }}"
+            target="_blank"
+          >
+            View full map on OpenStreetMap
+          </a>
+        </small>
+      </div>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-md-8 mb-4">
+        <img
+          src="{{ monument.THUMBNAIL }}"
+          class="img-fluid rounded shadow-sm"
+          alt="{{ monument.monument_name }}"
+          style="width:100%; object-fit:cover; max-height:600px;"
+        >
+      </div>
+      <div class="col-md-4">
+        <h2 class="mb-3">{{ monument.monument_name }}</h2>
+        <p><strong>Category:</strong> {{ monument.ITEM_CATEGORY }}</p>
+        <p><strong>City:</strong> {{ monument.city_name }}</p>
+        <p><strong>Excavation Project:</strong> {{ monument.project_name }}</p>
+        <p><strong>Researchers:</strong> {{ monument.researcher_names or 'N/A' }}</p>
+        <a href="{{ url_for('guest_home') }}" class="btn btn-secondary mt-4">
+          ← Back to Catalog
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
