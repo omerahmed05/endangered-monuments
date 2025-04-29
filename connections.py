@@ -401,30 +401,86 @@ def edit_researcher(researcher_id):
 def guest_home():
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor(dictionary=True)
+
     cursor.execute("""
       SELECT
         m.MONUMENT_ID,
-        m.NAME        AS monument_name,
+        m.NAME               AS monument_name,
         m.ITEM_CATEGORY,
         m.THUMBNAIL,
-        c.NAME        AS city_name,
-        GROUP_CONCAT(r.USERNAME SEPARATOR ', ') AS researcher_names
+        c.NAME               AS city_name,        -- added
+        p.NAME               AS project_name,
+        GROUP_CONCAT(r.USERNAME SEPARATOR ', ')
+          AS researcher_names
       FROM MONUMENT m
+
       JOIN CITY c
-        ON m.CITY_ID = c.CITY_ID
+        ON m.CITY_ID = c.CITY_ID                -- join CITY
+
+      JOIN EXCAVATION_PROJECT p
+        ON m.EXCAVATION_ID = p.EXCAVATION_ID    -- join PROJECT
+
       LEFT JOIN RESEARCHER r
         ON m.EXCAVATION_ID = r.EXCAVATION_ID
+
       GROUP BY
-        m.MONUMENT_ID, m.NAME, m.ITEM_CATEGORY,
-        m.THUMBNAIL, c.NAME
+        m.MONUMENT_ID,
+        m.NAME,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        c.NAME,                                  -- include city in GROUP BY
+        p.NAME
+
       ORDER BY m.MONUMENT_ID;
     """)
     monuments = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('guest_home.html',
-                           monuments=monuments)
+    return render_template('guest_home.html', monuments=monuments)
+
+@app.route('/monument/<int:monument_id>')
+def monument_detail(monument_id):
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+      SELECT
+        m.MONUMENT_ID,
+        m.NAME               AS monument_name,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        m.LATITUDE,
+        m.LONGITUDE,
+        c.NAME               AS city_name,
+        p.NAME               AS project_name,        -- new column
+        GROUP_CONCAT(r.USERNAME SEPARATOR ', ') 
+          AS researcher_names
+      FROM MONUMENT m
+      JOIN CITY c
+        ON m.CITY_ID = c.CITY_ID
+      JOIN EXCAVATION_PROJECT p
+        ON m.EXCAVATION_ID = p.EXCAVATION_ID  -- join to get project
+      LEFT JOIN RESEARCHER r
+        ON m.EXCAVATION_ID = r.EXCAVATION_ID
+      WHERE m.MONUMENT_ID = %s
+      GROUP BY
+        m.MONUMENT_ID,
+        m.NAME,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        m.LATITUDE,
+        m.LONGITUDE,
+        c.NAME,
+        p.NAME
+    """, (monument_id,))
+    mon = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not mon:
+        abort(404)
+    return render_template('monument_detail.html', monument=mon)
+
 if __name__ == '__main__':
     #print(app.url_map)
     app.run(debug=True)
