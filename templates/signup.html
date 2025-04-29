@@ -1,42 +1,65 @@
 {% extends "base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
 {% block content %}
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card shadow-sm mb-5">
-        <div class="card-header text-center">
-          <h2>Create {{ role.title() }} Account</h2>
-        </div>
-        <div class="card-body">
-          <form method="post" novalidate>
-            {% for field in fields %}
-              {# only render if display is true #}
-              {% if field.display %}
-                <div class="mb-3">
-                  <label for="{{ field.name }}" class="form-label">
-                    {{ field.name.replace('_',' ').title() }}
-                    {% if field.required %}
-                      <small class="text-danger">(required)</small>
-                    {% else %}
-                      <small class="text-muted">(optional)</small>
-                    {% endif %}
-                  </label>
-                  <input
-                    type="{{ field.type }}"
-                    class="form-control"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    placeholder="{% if field.required %}Required{% else %}Optional{% endif %}"
-                    {% if field.required %} required {% endif %}
-                  >
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-center">Sign Up as {{ role|title }}</h2>
                 </div>
-              {% endif %}
-            {% endfor %}
-            <button type="submit" class="btn btn-primary w-100">
-              Sign Up
-            </button>
-          </form>
+                <div class="card-body">
+                    <form method="POST">
+                        {% for field in fields %}
+                            {% if field.display %}
+                                <div class="mb-3">
+                                    <label for="{{ field.name }}" class="form-label">
+                                        {% if field.name == 'EXCAVATION_ID' %}
+                                            Project
+                                        {% elif field.name == 'MANAGER' %}
+                                            Manager
+                                        {% else %}
+                                            {{ field.name|title }}
+                                        {% endif %}
+                                        {% if field.required %}
+                                            <span class="text-danger">*</span>
+                                        {% endif %}
+                                    </label>
+                                    {% if field.name == 'EXCAVATION_ID' %}
+                                        <select class="form-select" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                                            <option value="">Select a Project</option>
+                                            {% for project in excavation_projects %}
+                                                <option value="{{ project.EXCAVATION_ID }}">{{ project.NAME }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% elif field.name == 'MANAGER' %}
+                                        <select class="form-select" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                                            <option value="">Select a Manager</option>
+                                            {% for manager in managers %}
+                                                <option value="{{ manager.ARCHAEOLOGIST_ID }}">{{ manager.USERNAME }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% else %}
+                                        <input type="{{ field.type }}" class="form-control" id="{{ field.name }}" name="{{ field.name }}" 
+                                               {% if field.required %}required{% endif %}
+                                               {% if field.name == 'PASSWORD' %}placeholder="Enter your password"{% endif %}
+                                               {% if field.name == 'USERNAME' %}placeholder="Choose a username"{% endif %}>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Sign Up</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center">
+                    <p class="mb-0">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
+</div>
 {% endblock %}

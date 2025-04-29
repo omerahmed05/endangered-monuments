@@ -214,6 +214,9 @@ def signup(role):
         # 2) map role to a concrete table name
         if role == 'researcher':
             table_name = 'RESEARCHER'
+            # Add EXCAVATION_ID and MANAGER to data
+            data['EXCAVATION_ID'] = request.form.get('EXCAVATION_ID')
+            data['MANAGER'] = request.form.get('MANAGER')
         elif role == 'archaeologist':
             table_name = 'ARCHAEOLOGIST'
         else:
@@ -235,9 +238,34 @@ def signup(role):
         return redirect(url_for('login'))
 
     # GET → render the signup form
+    # Fetch excavation projects and managers for dropdowns
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    
+    # Fetch excavation projects
+    cursor.execute("SELECT EXCAVATION_ID, NAME FROM EXCAVATION_PROJECT")
+    excavation_projects = cursor.fetchall()
+    
+    # Fetch managers (archaeologists who are managers)
+    cursor.execute("""
+        SELECT a.ARCHAEOLOGIST_ID, a.USERNAME 
+        FROM ARCHAEOLOGIST a
+        WHERE a.ARCHAEOLOGIST_ID IN (
+            SELECT DISTINCT r.MANAGER 
+            FROM RESEARCHER r 
+            WHERE r.MANAGER IS NOT NULL
+        )
+    """)
+    managers = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+
     return render_template('signup.html',
                            role=role,
-                           fields=SIGNUP_FIELDS[role])
+                           fields=SIGNUP_FIELDS[role],
+                           excavation_projects=excavation_projects,
+                           managers=managers)
 
 @app.route('/login', methods=['GET','POST'])
 def login():
