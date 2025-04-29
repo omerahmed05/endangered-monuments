@@ -1,64 +1,167 @@
 {% extends "base.html" %}
-{% block content %}
-  <div class="container py-5">
-    <h1 class="text-center mb-5">Admin Statistics</h1>
 
-    <!-- Summary cards -->
-    <div class="row text-center mb-5">
-      <div class="col-md-6 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Total Archaeologists</h5>
-            <p class="display-6">{{ total_archaeologists }}</p>
-          </div>
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Administrative Statistics Dashboard</h1>
+
+    <!-- Basic Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Archaeologists</h5>
+                    <h2 class="card-text">{{ basic_stats.total_archaeologists }}</h2>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-md-6 mb-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Total Researchers</h5>
-            <p class="display-6">{{ total_researchers }}</p>
-          </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Projects</h5>
+                    <h2 class="card-text">{{ basic_stats.total_projects }}</h2>
+                </div>
+            </div>
         </div>
-      </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Average Monuments per Project</h5>
+                    <h2 class="card-text">{{ "%.1f"|format(basic_stats.avg_monuments_per_project) }}</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Archaeologists per Project -->
-    <h2 class="mt-4">Archaeologists per Excavation Project</h2>
-    <table class="table table-striped mb-5">
-      <thead>
-        <tr>
-          <th>Project</th>
-          <th># Archaeologists</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in arch_per_project %}
-          <tr>
-            <td>{{ row.project_name }}</td>
-            <td>{{ row.archaeologist_count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <!-- Project Statistics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Project Statistics</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Monuments</th>
+                            <th>Researchers</th>
+                            <th>Latitude Range</th>
+                            <th>Longitude Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in project_stats %}
+                        <tr>
+                            <td>{{ project.project_name }}</td>
+                            <td>{{ project.monument_count }}</td>
+                            <td>{{ project.researcher_count }}</td>
+                            <td>{{ "%.4f"|format(project.min_latitude) }} to {{ "%.4f"|format(project.max_latitude) }}</td>
+                            <td>{{ "%.4f"|format(project.min_longitude) }} to {{ "%.4f"|format(project.max_longitude) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    <!-- Researchers per Archaeologist -->
-    <h2 class="mt-4">Researchers per Archaeologist</h2>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Archaeologist</th>
-          <th># Researchers</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in researchers_per_arch %}
-          <tr>
-            <td>{{ row.archaeologist }}</td>
-            <td>{{ row.researcher_count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- City Statistics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>City-wise Statistics</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>Projects</th>
+                            <th>Monuments</th>
+                            <th>Researchers</th>
+                            <th>Documented Monuments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for city in city_stats %}
+                        <tr>
+                            <td>{{ city.city_name }}</td>
+                            <td>{{ city.project_count }}</td>
+                            <td>{{ city.monument_count }}</td>
+                            <td>{{ city.researcher_count }}</td>
+                            <td>{{ city.documented_monuments }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monument Category Statistics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Monument Category Statistics</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Count</th>
+                            <th>Latitude Range</th>
+                            <th>Longitude Range</th>
+                            <th>Average Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in category_stats %}
+                        <tr>
+                            <td>{{ category.ITEM_CATEGORY }}</td>
+                            <td>{{ category.count }}</td>
+                            <td>{{ "%.4f"|format(category.min_latitude) }} to {{ "%.4f"|format(category.max_latitude) }}</td>
+                            <td>{{ "%.4f"|format(category.min_longitude) }} to {{ "%.4f"|format(category.max_longitude) }}</td>
+                            <td>({{ "%.4f"|format(category.avg_latitude) }}, {{ "%.4f"|format(category.avg_longitude) }})</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Researcher Performance -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Researcher Performance Metrics</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Researcher</th>
+                            <th>Monuments Worked On</th>
+                            <th>Projects Involved</th>
+                            <th>Cities Worked In</th>
+                            <th>Documented Monuments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for researcher in researcher_stats %}
+                        <tr>
+                            <td>{{ researcher.USERNAME }}</td>
+                            <td>{{ researcher.monuments_worked_on }}</td>
+                            <td>{{ researcher.projects_involved }}</td>
+                            <td>{{ researcher.cities_worked_in }}</td>
+                            <td>{{ researcher.documented_monuments }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

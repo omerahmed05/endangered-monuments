@@ -55,5 +55,78 @@
         </a>
       </div>
     </div>
+
+    <!-- Condition Notes -->
+    <div class="mb-4">
+        <h5>Condition Notes</h5>
+        <div class="card">
+            <div class="card-body">
+                <p class="card-text">{{ monument.condition_notes or 'No condition notes available' }}</p>
+                {% if session.get('role') == 'archaeologist' %}
+                <button class="btn btn-sm btn-primary mt-2" onclick="editNotes({{ monument.MONUMENT_ID }})">
+                    Edit Notes
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
   </div>
+
+  <!-- Edit Notes Modal -->
+  <div class="modal fade" id="editNotesModal" tabindex="-1">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Edit Condition Notes</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                  <form id="editNotesForm">
+                      <input type="hidden" name="monument_id">
+                      <div class="mb-3">
+                          <label class="form-label">Notes</label>
+                          <textarea class="form-control" name="condition_notes" rows="5"></textarea>
+                      </div>
+                  </form>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-primary" onclick="updateNotes()">Save Changes</button>
+              </div>
+          </div>
+      </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editNotes(monumentId) {
+    const form = document.getElementById('editNotesForm');
+    form.monument_id.value = monumentId;
+    form.condition_notes.value = document.querySelector('.card-text').textContent.trim();
+    new bootstrap.Modal(document.getElementById('editNotesModal')).show();
+}
+
+function updateNotes() {
+    const form = document.getElementById('editNotesForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch('/api/monument/notes', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+}
+</script>
 {% endblock %}

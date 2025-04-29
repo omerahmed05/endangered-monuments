@@ -478,15 +478,16 @@ def monument_detail(monument_id):
         m.THUMBNAIL,
         m.LATITUDE,
         m.LONGITUDE,
+        m.CONDITION_NOTES,
         c.NAME               AS city_name,
-        p.NAME               AS project_name,        -- new column
+        p.NAME               AS project_name,
         GROUP_CONCAT(r.USERNAME SEPARATOR ', ') 
           AS researcher_names
       FROM MONUMENT m
       JOIN CITY c
         ON m.CITY_ID = c.CITY_ID
       JOIN EXCAVATION_PROJECT p
-        ON m.EXCAVATION_ID = p.EXCAVATION_ID  -- join to get project
+        ON m.EXCAVATION_ID = p.EXCAVATION_ID
       LEFT JOIN RESEARCHER r
         ON m.EXCAVATION_ID = r.EXCAVATION_ID
       WHERE m.MONUMENT_ID = %s
@@ -497,6 +498,7 @@ def monument_detail(monument_id):
         m.THUMBNAIL,
         m.LATITUDE,
         m.LONGITUDE,
+        m.CONDITION_NOTES,
         c.NAME,
         p.NAME
     """, (monument_id,))
@@ -634,46 +636,102 @@ def admin_statistics():
     conn = mysql.connector.connect(**config)
     cursor = conn.cursor(dictionary=True)
 
-    # Totals
-    cursor.execute("SELECT COUNT(*) AS total_archaeologists FROM ARCHAEOLOGIST")
-    total_archaeologists = cursor.fetchone()['total_archaeologists']
-
-    cursor.execute("SELECT COUNT(*) AS total_researchers FROM RESEARCHER")
-    total_researchers = cursor.fetchone()['total_researchers']
-
-    # Archaeologists per excavation project
+    # 1. Basic Counts and Averages
     cursor.execute("""
-      SELECT
-        p.NAME AS project_name,
-        COUNT(a.ARCHAEOLOGIST_ID) AS archaeologist_count
-      FROM EXCAVATION_PROJECT p
-      LEFT JOIN ARCHAEOLOGIST a
-        ON p.EXCAVATION_ID = a.EXCAVATION_ID
-      GROUP BY p.EXCAVATION_ID, p.NAME
+        SELECT 
+            (SELECT COUNT(*) FROM ARCHAEOLOGIST) AS total_archaeologists,
+            (SELECT COUNT(*) FROM EXCAVATION_PROJECT) AS total_projects,
+            (SELECT COUNT(*) FROM CITY) AS total_cities,
+            (SELECT COUNT(*) FROM MONUMENT) AS total_monuments,
+            (SELECT COUNT(*) FROM RESEARCHER) AS total_researchers,
+            (SELECT AVG(monument_count) FROM (
+                SELECT COUNT(m.MONUMENT_ID) AS monument_count
+                FROM EXCAVATION_PROJECT p
+                LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+                GROUP BY p.EXCAVATION_ID
+            ) AS project_counts) AS avg_monuments_per_project
     """)
-    arch_per_project = cursor.fetchall()
+    basic_stats = cursor.fetchone()
 
-    # Researchers per archaeologist
+    # 2. Project Statistics
     cursor.execute("""
-      SELECT
-        a.USERNAME AS archaeologist,
-        COUNT(r.RESEARCHER_ID) AS researcher_count
-      FROM ARCHAEOLOGIST a
-      LEFT JOIN RESEARCHER r
-        ON a.ARCHAEOLOGIST_ID = r.MANAGER
-      GROUP BY a.ARCHAEOLOGIST_ID, a.USERNAME
+        SELECT 
+            p.NAME AS project_name,
+            COUNT(m.MONUMENT_ID) AS monument_count,
+            COUNT(r.RESEARCHER_ID) AS researcher_count,
+            MIN(m.LATITUDE) AS min_latitude,
+            MAX(m.LATITUDE) AS max_latitude,
+            MIN(m.LONGITUDE) AS min_longitude,
+            MAX(m.LONGITUDE) AS max_longitude
+        FROM EXCAVATION_PROJECT p
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+        GROUP BY p.EXCAVATION_ID, p.NAME
+        ORDER BY monument_count DESC
     """)
-    researchers_per_arch = cursor.fetchall()
+    project_stats = cursor.fetchall()
+
+    # 3. City-wise Statistics
+    cursor.execute("""
+        SELECT 
+            c.NAME AS city_name,
+            COUNT(DISTINCT p.EXCAVATION_ID) AS project_count,
+            COUNT(DISTINCT m.MONUMENT_ID) AS monument_count,
+            COUNT(DISTINCT r.RESEARCHER_ID) AS researcher_count,
+            SUM(CASE WHEN m.CONDITION_NOTES IS NOT NULL THEN 1 ELSE 0 END) AS documented_monuments
+        FROM CITY c
+        LEFT JOIN EXCAVATION_PROJECT p ON c.CITY_ID = p.CITY_ID
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        LEFT JOIN RESEARCHER r ON p.EXCAVATION_ID = r.EXCAVATION_ID
+        GROUP BY c.CITY_ID, c.NAME
+        ORDER BY monument_count DESC
+    """)
+    city_stats = cursor.fetchall()
+
+    # 4. Monument Category Statistics
+    cursor.execute("""
+        SELECT 
+            ITEM_CATEGORY,
+            COUNT(*) AS count,
+            MIN(LATITUDE) AS min_latitude,
+            MAX(LATITUDE) AS max_latitude,
+            MIN(LONGITUDE) AS min_longitude,
+            MAX(LONGITUDE) AS max_longitude,
+            AVG(LATITUDE) AS avg_latitude,
+            AVG(LONGITUDE) AS avg_longitude
+        FROM MONUMENT
+        GROUP BY ITEM_CATEGORY
+        ORDER BY count DESC
+    """)
+    category_stats = cursor.fetchall()
+
+    # 5. Researcher Performance Metrics
+    cursor.execute("""
+        SELECT 
+            r.USERNAME,
+            COUNT(DISTINCT m.MONUMENT_ID) AS monuments_worked_on,
+            COUNT(DISTINCT p.EXCAVATION_ID) AS projects_involved,
+            COUNT(DISTINCT c.CITY_ID) AS cities_worked_in,
+            SUM(CASE WHEN m.CONDITION_NOTES IS NOT NULL THEN 1 ELSE 0 END) AS documented_monuments
+        FROM RESEARCHER r
+        LEFT JOIN EXCAVATION_PROJECT p ON r.EXCAVATION_ID = p.EXCAVATION_ID
+        LEFT JOIN MONUMENT m ON p.EXCAVATION_ID = m.EXCAVATION_ID
+        LEFT JOIN CITY c ON p.CITY_ID = c.CITY_ID
+        GROUP BY r.RESEARCHER_ID, r.USERNAME
+        ORDER BY monuments_worked_on DESC
+    """)
+    researcher_stats = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
     return render_template(
-      'admin_statistics.html',
-      total_archaeologists=total_archaeologists,
-      total_researchers=total_researchers,
-      arch_per_project=arch_per_project,
-      researchers_per_arch=researchers_per_arch
+        'admin_statistics.html',
+        basic_stats=basic_stats,
+        project_stats=project_stats,
+        city_stats=city_stats,
+        category_stats=category_stats,
+        researcher_stats=researcher_stats
     )
 
 @app.route('/researcher')
@@ -1076,6 +1134,36 @@ def handle_project():
         conn.commit()
         return jsonify({'success': True, 'message': message})
         
+    except mysql.connector.Error as err:
+        return jsonify({'success': False, 'message': str(err)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/monument/notes', methods=['PUT'])
+def update_monument_notes():
+    if session.get('role') != 'archaeologist':
+        abort(403)
+    
+    data = request.json
+    monument_id = data.get('monument_id')
+    condition_notes = data.get('condition_notes')
+    
+    if not monument_id:
+        return jsonify({'success': False, 'message': 'Missing monument ID'})
+    
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            UPDATE MONUMENT 
+            SET CONDITION_NOTES = %s 
+            WHERE MONUMENT_ID = %s
+        """, (condition_notes, monument_id))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Notes updated successfully'})
     except mysql.connector.Error as err:
         return jsonify({'success': False, 'message': str(err)})
     finally:

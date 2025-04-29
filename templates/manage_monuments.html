@@ -4,11 +4,11 @@
 <div class="container mt-4">
     <h1 class="mb-4">Manage Monuments</h1>
     
-    <!-- Add New Monument Button -->
-    <button type="button" class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#addMonumentModal">
+    <!-- Add Monument Button -->
+    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addMonumentModal">
         Add New Monument
     </button>
-    
+
     <!-- Monuments Table -->
     <div class="table-responsive">
         <table class="table table-striped">
@@ -19,7 +19,6 @@
                     <th>Category</th>
                     <th>City</th>
                     <th>Project</th>
-                    <th>Researchers</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -31,12 +30,11 @@
                     <td>{{ monument.ITEM_CATEGORY }}</td>
                     <td>{{ monument.city_name }}</td>
                     <td>{{ monument.project_name }}</td>
-                    <td>{{ monument.researcher_names or 'None' }}</td>
                     <td>
-                        <button class="btn btn-sm btn-info" onclick="editMonument({{ monument.MONUMENT_ID }})">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="editMonument({{ monument.MONUMENT_ID }})">
                             Edit
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMonument({{ monument.MONUMENT_ID }})">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteMonument({{ monument.MONUMENT_ID }})">
                             Delete
                         </button>
                     </td>
@@ -45,121 +43,120 @@
             </tbody>
         </table>
     </div>
-</div>
 
-<!-- Add Monument Modal -->
-<div class="modal fade" id="addMonumentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Monument</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Add Monument Modal -->
+    <div class="modal fade" id="addMonumentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Monument</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMonumentForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="item_category" class="form-label">Category</label>
+                            <input type="text" class="form-control" id="item_category" name="item_category" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="thumbnail" class="form-label">Thumbnail URL</label>
+                            <input type="text" class="form-control" id="thumbnail" name="thumbnail">
+                        </div>
+                        <div class="mb-3">
+                            <label for="latitude" class="form-label">Latitude</label>
+                            <input type="number" step="any" class="form-control" id="latitude" name="latitude" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="longitude" class="form-label">Longitude</label>
+                            <input type="number" step="any" class="form-control" id="longitude" name="longitude" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="city_id" class="form-label">City</label>
+                            <select class="form-select" id="city_id" name="city_id" required>
+                                {% for city in cities %}
+                                <option value="{{ city.CITY_ID }}">{{ city.NAME }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="excavation_id" class="form-label">Project</label>
+                            <select class="form-select" id="excavation_id" name="excavation_id" required>
+                                {% for project in projects %}
+                                <option value="{{ project.EXCAVATION_ID }}">{{ project.NAME }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addMonument()">Add Monument</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="addMonumentForm">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-control" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <input type="text" class="form-control" name="item_category" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Thumbnail URL</label>
-                        <input type="url" class="form-control" name="thumbnail">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Latitude</label>
-                        <input type="number" step="any" class="form-control" name="latitude" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Longitude</label>
-                        <input type="number" step="any" class="form-control" name="longitude" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">City</label>
-                        <select class="form-select" name="city_id" required>
-                            {% for city in cities %}
-                            <option value="{{ city.CITY_ID }}">{{ city.NAME }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Project</label>
-                        <select class="form-select" name="excavation_id" required>
-                            {% for project in projects %}
-                            <option value="{{ project.EXCAVATION_ID }}">{{ project.NAME }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addMonument()">Add Monument</button>
+        </div>
+    </div>
+
+    <!-- Edit Monument Modal -->
+    <div class="modal fade" id="editMonumentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Monument</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMonumentForm">
+                        <input type="hidden" id="edit_monument_id" name="monument_id">
+                        <div class="mb-3">
+                            <label for="edit_name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="edit_name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_item_category" class="form-label">Category</label>
+                            <input type="text" class="form-control" id="edit_item_category" name="item_category" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_thumbnail" class="form-label">Thumbnail URL</label>
+                            <input type="text" class="form-control" id="edit_thumbnail" name="thumbnail">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_latitude" class="form-label">Latitude</label>
+                            <input type="number" step="any" class="form-control" id="edit_latitude" name="latitude" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_longitude" class="form-label">Longitude</label>
+                            <input type="number" step="any" class="form-control" id="edit_longitude" name="longitude" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_city_id" class="form-label">City</label>
+                            <select class="form-select" id="edit_city_id" name="city_id" required>
+                                {% for city in cities %}
+                                <option value="{{ city.CITY_ID }}">{{ city.NAME }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_excavation_id" class="form-label">Project</label>
+                            <select class="form-select" id="edit_excavation_id" name="excavation_id" required>
+                                {% for project in projects %}
+                                <option value="{{ project.EXCAVATION_ID }}">{{ project.NAME }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateMonument()">Update Monument</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Edit Monument Modal -->
-<div class="modal fade" id="editMonumentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Monument</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editMonumentForm">
-                    <input type="hidden" name="monument_id">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-control" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <input type="text" class="form-control" name="item_category" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Thumbnail URL</label>
-                        <input type="url" class="form-control" name="thumbnail">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Latitude</label>
-                        <input type="number" step="any" class="form-control" name="latitude" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Longitude</label>
-                        <input type="number" step="any" class="form-control" name="longitude" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">City</label>
-                        <select class="form-select" name="city_id" required>
-                            {% for city in cities %}
-                            <option value="{{ city.CITY_ID }}">{{ city.NAME }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Project</label>
-                        <select class="form-select" name="excavation_id" required>
-                            {% for project in projects %}
-                            <option value="{{ project.EXCAVATION_ID }}">{{ project.NAME }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="updateMonument()">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -181,24 +178,35 @@ function addMonument() {
         if (data.success) {
             location.reload();
         } else {
-            alert(data.message);
+            alert('Error: ' + data.message);
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while adding the monument.');
     });
 }
 
 function editMonument(monumentId) {
-    const row = document.querySelector(`tr:has(td:first-child:contains('${monumentId}'))`);
     const form = document.getElementById('editMonumentForm');
+    const modal = new bootstrap.Modal(document.getElementById('editMonumentModal'));
     
-    form.monument_id.value = monumentId;
-    form.name.value = row.children[1].textContent;
-    form.item_category.value = row.children[2].textContent;
-    form.latitude.value = row.children[3].textContent;
-    form.longitude.value = row.children[4].textContent;
-    form.city_id.value = row.children[5].textContent;
-    form.excavation_id.value = row.children[6].textContent;
+    // Find the row with the matching monument ID
+    const rows = document.querySelectorAll('tbody tr');
+    const row = Array.from(rows).find(row => 
+        row.querySelector('td:first-child').textContent === monumentId.toString()
+    );
     
-    new bootstrap.Modal(document.getElementById('editMonumentModal')).show();
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        form.querySelector('#edit_monument_id').value = monumentId;
+        form.querySelector('#edit_name').value = cells[1].textContent;
+        form.querySelector('#edit_item_category').value = cells[2].textContent;
+        form.querySelector('#edit_city_id').value = cells[3].textContent;
+        form.querySelector('#edit_excavation_id').value = cells[4].textContent;
+        
+        modal.show();
+    }
 }
 
 function updateMonument() {
@@ -218,8 +226,12 @@ function updateMonument() {
         if (data.success) {
             location.reload();
         } else {
-            alert(data.message);
+            alert('Error: ' + data.message);
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the monument.');
     });
 }
 
@@ -237,8 +249,12 @@ function deleteMonument(monumentId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert(data.message);
+                alert('Error: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the monument.');
         });
     }
 }

@@ -153,15 +153,22 @@ function addProject() {
 }
 
 function editProject(projectId) {
-    const row = document.querySelector(`tr:has(td:first-child:contains('${projectId}'))`);
     const form = document.getElementById('editProjectForm');
+    // Find the row containing the project ID
+    const rows = document.querySelectorAll('tbody tr');
+    const row = Array.from(rows).find(row => 
+        row.querySelector('td:first-child').textContent === projectId.toString()
+    );
     
-    form.excavation_id.value = projectId;
-    form.name.value = row.children[1].textContent;
-    form.project_url.value = row.children[3].querySelector('a')?.href || '';
-    form.city_id.value = row.children[2].textContent;
-    
-    new bootstrap.Modal(document.getElementById('editProjectModal')).show();
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        form.excavation_id.value = projectId;
+        form.name.value = cells[1].textContent;
+        form.project_url.value = cells[3].querySelector('a')?.href || '';
+        form.city_id.value = cells[2].textContent;
+        
+        new bootstrap.Modal(document.getElementById('editProjectModal')).show();
+    }
 }
 
 function updateProject() {
