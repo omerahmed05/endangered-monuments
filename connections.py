@@ -481,6 +481,70 @@ def monument_detail(monument_id):
         abort(404)
     return render_template('monument_detail.html', monument=mon)
 
+@app.route('/excavations')
+def guest_excavations():
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+      SELECT
+        p.EXCAVATION_ID,
+        p.NAME           AS project_name,
+        p.PROJECT_URL,
+        c.NAME           AS city_name
+      FROM EXCAVATION_PROJECT p
+      JOIN CITY c ON p.CITY_ID = c.CITY_ID
+      ORDER BY p.EXCAVATION_ID;
+    """)
+    projects = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('guest_excavations.html', projects=projects)
+
+
+@app.route('/excavation/<int:excavation_id>')
+def excavation_detail(excavation_id):
+    conn = mysql.connector.connect(**config)
+    cursor = conn.cursor(dictionary=True)
+
+    # First, get the project’s own name
+    cursor.execute(
+      "SELECT NAME AS project_name FROM EXCAVATION_PROJECT WHERE EXCAVATION_ID = %s",
+      (excavation_id,)
+    )
+    proj = cursor.fetchone()
+    project_name = proj['project_name'] if proj else 'Excavation'
+
+    # Then fetch its monuments
+    cursor.execute("""
+      SELECT
+        m.MONUMENT_ID,
+        m.NAME            AS monument_name,
+        m.ITEM_CATEGORY,
+        m.THUMBNAIL,
+        c.NAME            AS city_name,
+        GROUP_CONCAT(r.USERNAME SEPARATOR ', ')
+          AS researcher_names
+      FROM MONUMENT m
+      JOIN CITY c ON m.CITY_ID = c.CITY_ID
+      LEFT JOIN RESEARCHER r
+        ON m.EXCAVATION_ID = r.EXCAVATION_ID
+      WHERE m.EXCAVATION_ID = %s
+      GROUP BY
+        m.MONUMENT_ID, m.NAME, m.ITEM_CATEGORY,
+        m.THUMBNAIL, c.NAME
+      ORDER BY m.MONUMENT_ID;
+    """, (excavation_id,))
+
+    monuments = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template(
+      'excavation_detail.html',
+      monuments=monuments,
+      project_name=project_name
+    )
+
 if __name__ == '__main__':
     #print(app.url_map)
     app.run(debug=True)

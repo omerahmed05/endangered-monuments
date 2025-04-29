@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container py-5">
+    <h1 class="text-center mb-4">Explore Excavation Projects</h1>
+    <div class="row g-4">
+      {% for p in projects %}
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ p.project_name }}</h5>
+              <div class="mb-2">
+                <span class="badge bg-success">{{ p.city_name }}</span>
+              </div>
+              {% if p.PROJECT_URL %}
+                <p class="card-text flex-grow-1">
+                  <a href="{{ p.PROJECT_URL }}" target="_blank">Project Website</a>
+                </p>
+              {% endif %}
+              <div class="mt-auto">
+                <a
+                  href="{{ url_for('excavation_detail', excavation_id=p.EXCAVATION_ID) }}"
+                  class="btn btn-primary w-100"
+                >Browse Monuments</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
